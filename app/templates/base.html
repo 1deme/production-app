@@ -38,6 +38,15 @@
   </nav>
 
   <main class="content">
+    {% if demo_mode %}
+    <div class="demo-banner">
+      <i class="bi bi-cone-striped"></i>
+      <div class="flex-grow-1"><strong>{{ t('demo.banner_title') }}</strong> {{ t('demo.banner_text') }}</div>
+      <form method="post" action="/demo/clear" data-confirm="{{ t('demo.confirm_clear') }}">
+        <button class="btn btn-sm btn-dark text-nowrap"><i class="bi bi-trash me-1"></i>{{ t('demo.clear') }}</button>
+      </form>
+    </div>
+    {% endif %}
     <header class="page-header">
       <div>
         {% block breadcrumbs %}{% endblock %}

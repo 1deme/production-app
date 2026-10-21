@@ -101,3 +101,8 @@ dl.info dd { margin-bottom: .75rem; }
 .date-input { font-variant-numeric: tabular-nums; }
 .table tfoot td { border-bottom: 0; }
 @media print { .sidebar, .page-actions, .toast-container { display: none !important; } .content { padding: 0; } }
+
+/* --- დემო-რეჟიმის ბანერი --- */
+.demo-banner { display: flex; align-items: center; gap: .75rem; background: #fff3c4; border: 1px solid #f0d77a; color: #5c4700;
+  border-radius: .75rem; padding: .6rem .9rem; margin-bottom: 1rem; }
+.demo-banner > i { font-size: 1.4rem; }

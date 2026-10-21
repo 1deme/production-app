@@ -69,6 +69,22 @@
       </table>
       <div class="card-body small text-muted">{{ t('settings.units_help') }}</div>
     </div>
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-box2-heart me-1"></i>{{ t('demo.title') }}</div>
+      <div class="card-body">
+        {% if demo_mode %}
+          <p class="small">{{ t('demo.settings_active') }}</p>
+          <form method="post" action="/demo/clear" data-confirm="{{ t('demo.confirm_clear') }}">
+            <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{{ t('demo.clear') }}</button></form>
+        {% elif db_empty %}
+          <p class="small">{{ t('demo.settings_empty') }}</p>
+          <form method="post" action="/demo/load" data-confirm="{{ t('demo.confirm_load') }}" data-confirm-style="btn-primary">
+            <button class="btn btn-outline-primary"><i class="bi bi-box2-heart me-1"></i>{{ t('demo.load') }}</button></form>
+        {% else %}
+          <p class="small text-muted mb-0">{{ t('demo.settings_has_data') }}</p>
+        {% endif %}
+      </div>
+    </div>
     <div class="card">
       <div class="card-header"><i class="bi bi-info-circle me-1"></i>{{ t('settings.about') }}</div>
       <div class="card-body small">

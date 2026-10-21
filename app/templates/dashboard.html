@@ -21,8 +21,19 @@
   </div>
 </div>
 
-{% if counts.active == 0 %}
-<div class="alert alert-info"><i class="bi bi-lightbulb me-1"></i>{{ t('dashboard.get_started') }}</div>
+{% if db_empty %}
+<div class="card mb-3 border-primary-subtle">
+  <div class="card-body">
+    <h2 class="h5 mb-2"><i class="bi bi-stars me-1 text-primary"></i>{{ t('demo.welcome_title') }}</h2>
+    <p class="mb-3">{{ t('demo.welcome_text') }}</p>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="/ingredients/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('demo.start_real') }}</a>
+      <form method="post" action="/demo/load" data-confirm="{{ t('demo.confirm_load') }}" data-confirm-style="btn-primary">
+        <button class="btn btn-outline-primary"><i class="bi bi-box2-heart me-1"></i>{{ t('demo.load') }}</button>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <div class="row g-3 mb-3">
@@ -84,9 +95,9 @@
 
 <div class="row g-3 mb-3">
   <div class="col-xl-6"><div class="card h-100"><div class="card-header">{{ t('dashboard.chart_production') }}</div>
-    <div class="card-body"><div style="height: 220px"><canvas id="chart-production" role="img" aria-label="{{ t('dashboard.chart_production') }}"></canvas></div></div></div></div>
+    <div class="card-body">{% if d.chart_production|sum > 0 %}<div style="height: 220px"><canvas id="chart-production" role="img" aria-label="{{ t('dashboard.chart_production') }}"></canvas></div>{% else %}<div class="text-muted">{{ t('reports.no_data') }}</div>{% endif %}</div></div></div>
   <div class="col-xl-6"><div class="card h-100"><div class="card-header">{{ t('dashboard.chart_sales') }}</div>
-    <div class="card-body"><div style="height: 220px"><canvas id="chart-sales" role="img" aria-label="{{ t('dashboard.chart_sales') }}"></canvas></div></div></div></div>
+    <div class="card-body">{% if d.chart_sales|sum > 0 %}<div style="height: 220px"><canvas id="chart-sales" role="img" aria-label="{{ t('dashboard.chart_sales') }}"></canvas></div>{% else %}<div class="text-muted">{{ t('reports.no_data') }}</div>{% endif %}</div></div></div>
 </div>
 
 <div class="row g-3">
@@ -138,6 +149,7 @@
   };
   var days = {{ d.chart_days | tojson }};
   function bar(id, data) {
+    if (!document.getElementById(id)) return;
     new Chart(document.getElementById(id), { type: "bar",
       data: { labels: days, datasets: [{ data: data, backgroundColor: ACCENT, borderRadius: 4, maxBarThickness: 18 }] },
       options: common });

@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from app import config
 from app.i18n import t
 from app.models.system import User
-from app.services import audit, backup
+from app.services import audit, backup, demo
+from app.services.errors import BusinessError
 from app.services import settings as settings_svc
 from app.services import ingredients as ingredient_svc
 from app.services.units import all_units, kind_label
@@ -35,6 +36,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "active_nav": "dashboard",
         "counts": ingredient_svc.counts(db),
         "d": dashboard_data(db),
+        "db_empty": demo.is_empty(db),
     })
 
 
@@ -70,6 +72,7 @@ def settings_page(request: Request, db: Session = Depends(get_db)):
         "units": all_units(db),
         "kind_label": kind_label,
         "values": settings_svc.all_values(db),
+        "db_empty": demo.is_empty(db),
         "options": settings_svc.OPTIONS,
     })
 
@@ -90,6 +93,45 @@ async def save_settings(request: Request, db: Session = Depends(get_db),
     db.commit()
     flash(request, t("settings.saved"))
     return RedirectResponse("/settings", status_code=303)
+
+
+@router.post("/demo/load")
+def demo_load(request: Request, db: Session = Depends(get_db)):
+    try:
+        demo.load_demo(db)
+        db.commit()
+    except BusinessError as e:
+        db.rollback()
+        flash(request, e.msg.render(), "danger")
+        return RedirectResponse("/", status_code=303)
+    flash(request, t("demo.loaded"))
+    return RedirectResponse("/", status_code=303)
+
+
+@router.post("/demo/clear")
+def demo_clear(request: Request, db: Session = Depends(get_db)):
+    if not demo.is_demo(db):
+        flash(request, t("demo.not_demo"), "warning")
+        return RedirectResponse("/", status_code=303)
+    # წაშლამდე — სარეზერვო ასლი. თუ ასლი ვერ შეიქმნა, არაფერს ვშლით.
+    db_path = _db_path()
+    backup_name = "—"
+    if db_path is not None:
+        try:
+            path = backup.create_backup(db_path, config.BACKUP_DIR, config.BACKUP_KEEP, tag="before-demo-clear")
+            backup_name = path.name if path else "—"
+        except Exception as e:  # noqa: BLE001
+            flash(request, t("settings.backup_failed", error=str(e)), "danger")
+            return RedirectResponse("/", status_code=303)
+    try:
+        demo.clear_demo(db)
+        db.commit()
+    except BusinessError as e:
+        db.rollback()
+        flash(request, e.msg.render(), "danger")
+        return RedirectResponse("/", status_code=303)
+    flash(request, t("demo.cleared", backup=backup_name))
+    return RedirectResponse("/", status_code=303)
 
 
 @router.post("/settings/backup")

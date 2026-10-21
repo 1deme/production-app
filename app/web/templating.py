@@ -76,8 +76,24 @@ def is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true" and request.headers.get("HX-History-Restore-Request") != "true"
 
 
+def _demo_mode(request: Request) -> bool:
+    """დემო-რეჟიმის ბანერისთვის (ყველა გვერდზე)."""
+    factory = getattr(request.app.state, "session_factory", None)
+    if factory is None:
+        return False
+    try:
+        from app.services.demo import is_demo
+
+        with factory() as s:
+            return is_demo(s)
+    except Exception:  # noqa: BLE001 — ბანერის გამო გვერდი არ უნდა ჩავარდეს
+        return False
+
+
 def render(request: Request, name: str, context: dict | None = None, status_code: int = 200):
     ctx = dict(context or {})
+    if not is_htmx(request):
+        ctx.setdefault("demo_mode", _demo_mode(request))
     ctx.setdefault("active_nav", "")
     # HTMX-ის ნაწილობრივი პასუხი შეტყობინებებს არ აჩვენებს — ამიტომ არც „ვხარჯავთ“ მათ
     ctx["flashes"] = [] if is_htmx(request) else pop_flashes(request)
