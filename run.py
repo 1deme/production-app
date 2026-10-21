@@ -10,6 +10,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.request
 import webbrowser
 
 # Windows-ის კონსოლში ქართული ტექსტი სწორად რომ გამოჩნდეს
@@ -22,7 +23,7 @@ if sys.platform == "win32":
         pass
 for stream in (sys.stdout, sys.stderr):
     try:
-        stream.reconfigure(encoding="utf-8")
+        stream.reconfigure(encoding="utf-8", line_buffering=True)
     except (AttributeError, ValueError):
         pass
 
@@ -30,6 +31,7 @@ import uvicorn  # noqa: E402
 
 from app import config  # noqa: E402
 from app.bootstrap import prepare_database  # noqa: E402
+from app.i18n import t  # noqa: E402
 
 
 def port_in_use(host: str, port: int) -> bool:
@@ -38,15 +40,40 @@ def port_in_use(host: str, port: int) -> bool:
         return s.connect_ex((host, port)) == 0
 
 
+def port_state(host: str, port: int) -> str:
+    """free — თავისუფალია; ours — ჩვენი პროგრამა უკვე მუშაობს და პასუხობს;
+    other — დაკავებულია სხვა პროგრამით ან ჩვენი, მაგრამ გაყინული/შეჩერებული (მაგ. Ctrl+Z) — არ პასუხობს."""
+    if not port_in_use(host, port):
+        return "free"
+    try:
+        with urllib.request.urlopen(f"http://{host}:{port}/", timeout=3) as r:
+            body = r.read(4000).decode("utf-8", "ignore")
+        return "ours" if t("app.name") in body else "other"
+    except Exception:  # noqa: BLE001
+        return "other"
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    url = f"http://{config.HOST}:{config.PORT}/"
-
-    if port_in_use(config.HOST, config.PORT):
-        print(f"პროგრამა უკვე გაშვებულია (ან პორტი {config.PORT} დაკავებულია). ვხსნი ბრაუზერს: {url}")
-        webbrowser.open(url)
-        time.sleep(4)  # .exe-ის ფანჯარა მყისიერად რომ არ დაიხუროს — შეტყობინება წაკითხვადი იყოს
+    port = config.PORT
+    for candidate in range(config.PORT, config.PORT + 20):
+        state = port_state(config.HOST, candidate)
+        if state == "ours":
+            url = f"http://{config.HOST}:{candidate}/"
+            print(f"პროგრამა უკვე გაშვებულია — ვხსნი ბრაუზერს: {url}")
+            webbrowser.open(url)
+            time.sleep(4)  # .exe-ის ფანჯარა მყისიერად რომ არ დაიხუროს — შეტყობინება წაკითხვადი იყოს
+            return
+        if state == "free":
+            port = candidate
+            break
+        print(f"პორტი {candidate} დაკავებულია და არ პასუხობს — ვცდი შემდეგს...")
+    else:
+        print("თავისუფალი პორტი ვერ მოიძებნა. გადატვირთეთ კომპიუტერი და სცადეთ თავიდან.")
+        if config.FROZEN:
+            input("დახურვისთვის დააჭირეთ Enter-ს...")
         return
+    url = f"http://{config.HOST}:{port}/"
 
     print("ბაზის მომზადება...")
     prepare_database()
@@ -59,8 +86,8 @@ def main() -> None:
     if "--no-browser" not in sys.argv:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
     print(f"\nპროგრამა გაშვებულია: {url}")
-    print("გასაჩერებლად დახურეთ ეს ფანჯარა ან დააჭირეთ Ctrl+C.\n")
-    uvicorn.run(app, host=config.HOST, port=config.PORT, log_level="warning")
+    print("გასაჩერებლად დახურეთ ეს ფანჯარა ან დააჭირეთ Ctrl+C (არა Ctrl+Z — ის პროგრამას აყინებს).\n")
+    uvicorn.run(app, host=config.HOST, port=port, log_level="warning")
 
 
 if __name__ == "__main__":
