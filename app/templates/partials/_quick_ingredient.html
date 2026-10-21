@@ -1,0 +1,37 @@
+{# ახალი ინგრედიენტის სწრაფი შექმნა საბუთის ფორმიდან გაუსვლელად. საჭიროა: units #}
+<div class="modal fade" id="quickCreateModal" tabindex="-1" aria-labelledby="quickCreateTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" action="/api/ingredients/quick" method="post" novalidate>
+      <div class="modal-header">
+        <h5 class="modal-title" id="quickCreateTitle"><i class="bi bi-plus-circle me-1"></i>{{ t('ingredients.new_title') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('common.close') }}"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label" for="qc-name">{{ t('ingredients.name') }}<span class="req">*</span></label>
+          <input type="text" class="form-control" id="qc-name" name="name" maxlength="200" autocomplete="off">
+          <div class="invalid-feedback" data-error-for="name"></div>
+        </div>
+        <div class="row g-3">
+          <div class="col-6">
+            <label class="form-label" for="qc-unit">{{ t('ingredients.unit') }}<span class="req">*</span></label>
+            <select class="form-select" id="qc-unit" name="unit_id">
+              {% for u in units %}<option value="{{ u.id }}" {% if u.code == 'kg' %}selected{% endif %}>{{ u.name }} — {{ u.full_name }}</option>{% endfor %}
+            </select>
+            <div class="invalid-feedback" data-error-for="unit_id"></div>
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="qc-barcode">{{ t('ingredients.barcode') }}</label>
+            <input type="text" class="form-control" id="qc-barcode" name="barcode" maxlength="64" autocomplete="off">
+            <div class="invalid-feedback" data-error-for="barcodes"></div>
+          </div>
+        </div>
+        <div class="form-text mt-2">{{ t('docs.quick_create_hint') }}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t('common.cancel') }}</button>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{{ t('docs.quick_create_save') }}</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,18 @@
+{# რეცეპტის სტრიქონი. საჭიროა: ln {ingredient, qty, unit_id}, cost (₾ საბაზო ერთეულზე ან None), ubk, errors, idx #}
+{% set ing = ln.ingredient %}
+{% set line_errors = errors.get('line:' ~ idx, []) %}
+<tr data-line data-item-id="{{ ing.id }}" data-cost="{{ cost if cost is not none else '' }}" class="{% if line_errors %}table-danger{% endif %}">
+  <td>
+    <input type="hidden" name="line_ingredient_id" value="{{ ing.id }}">
+    <span class="fw-semibold">{{ ing.name }}</span>{% if not ing.is_active %} <span class="badge text-bg-secondary">{{ t('common.inactive') }}</span>{% endif %}
+    {% for e in line_errors %}<div class="small text-danger">{{ e }}</div>{% endfor %}
+  </td>
+  <td style="width: 9rem"><input type="text" inputmode="decimal" class="form-control num js-qty" name="line_qty" value="{{ ln.qty }}" data-focus autocomplete="off"></td>
+  <td style="width: 7.5rem">
+    <select class="form-select js-unit" name="line_unit_id">
+      {% for u in ubk[ing.unit.kind] %}<option value="{{ u.id }}" data-factor="{{ u.factor }}" {% if u.id == ln.unit_id %}selected{% endif %}>{{ u.name }}</option>{% endfor %}
+    </select>
+  </td>
+  <td class="num text-nowrap" data-line-cost data-no-price="{{ t('recipes.no_price') }}">—</td>
+  <td class="text-end" style="width: 3rem"><button type="button" class="btn btn-sm btn-outline-danger js-remove-row" title="{{ t('common.remove') }}" aria-label="{{ t('common.remove') }}"><i class="bi bi-x-lg"></i></button></td>
+</tr>

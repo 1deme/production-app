@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge %}
+{% block title %}{{ t('dashboard.title') }}{% endblock %}
+{% block heading %}{{ t('dashboard.title') }}{% endblock %}
+{% block actions %}
+  <a href="/receipts/new" class="btn btn-outline-primary"><i class="bi bi-truck me-1"></i>{{ t('receipts.new') }}</a>
+  <a href="/production/new" class="btn btn-success"><i class="bi bi-gear-wide-connected me-1"></i>{{ t('production.new') }}</a>
+  <a href="/dispatch/new" class="btn btn-outline-primary"><i class="bi bi-send me-1"></i>{{ t('dispatch.new') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    <form action="/ingredients" method="get" class="search-box" role="search">
+      <i class="bi bi-search"></i>
+      <input name="q" type="search" class="form-control" placeholder="{{ t('ingredients.search_placeholder') }}"
+             autocomplete="off" data-search-input aria-label="{{ t('dashboard.find_ingredient') }}">
+      <input type="hidden" name="go" value="1">
+      <i class="bi bi-upc-scan"></i>
+    </form>
+  </div>
+</div>
+
+{% if counts.active == 0 %}
+<div class="alert alert-info"><i class="bi bi-lightbulb me-1"></i>{{ t('dashboard.get_started') }}</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-xl-3"><a href="/reports/ingredient_stock" class="card card-body h-100 text-decoration-none text-reset">
+    <div class="stat"><i class="bi bi-exclamation-triangle {% if d.low %}text-danger{% endif %}"></i>
+      <div><div class="value {% if d.low %}text-low{% endif %}">{{ d.low|length }}</div><div class="label">{{ t('dashboard.low_stock') }}</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><a href="/reports/production" class="card card-body h-100 text-decoration-none text-reset">
+    <div class="stat"><i class="bi bi-gear-wide-connected"></i>
+      <div><div class="value">{{ fmt_money(d.month_production) }}</div><div class="label">{{ t('dashboard.production_30') }}</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><a href="/reports/dispatch" class="card card-body h-100 text-decoration-none text-reset">
+    <div class="stat"><i class="bi bi-send"></i>
+      <div><div class="value">{{ fmt_money(d.month_sales) }}</div><div class="label">{{ t('dashboard.sales_30') }}</div></div></div></a></div>
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100">
+    <div class="stat"><i class="bi bi-pencil-square {% if d.drafts %}text-warning{% endif %}"></i>
+      <div><div class="value">{{ d.drafts }}</div><div class="label">{{ t('dashboard.drafts') }}</div></div></div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-exclamation-triangle me-1"></i>{{ t('dashboard.low_stock_title') }}</div>
+      {% if d.low %}
+      <div class="table-responsive" style="max-height: 20rem">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>{{ t('ingredients.name') }}</th><th class="num">{{ t('reports.stock') }}</th><th class="num">{{ t('ingredients.min_stock') }}</th><th></th></tr></thead>
+        <tbody>
+        {% for ing, b in d.low %}
+          <tr><td><a href="/ingredients/{{ ing.id }}">{{ ing.name }}</a></td>
+            <td class="num text-low">{{ fmt_qty(b, ing.unit) }}</td><td class="num">{{ fmt_qty(ing.min_stock, ing.unit) }}</td>
+            <td class="text-end"><span class="badge text-bg-danger"><i class="bi bi-arrow-down"></i> {{ t('dashboard.below_min') }}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="card-body text-success"><i class="bi bi-check-circle me-1"></i>{{ t('dashboard.no_low_stock') }}</div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-xl-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between"><span><i class="bi bi-box-seam me-1"></i>{{ t('dashboard.product_stock') }}</span><a href="/products" class="small">{{ t('common.open') }} →</a></div>
+      {% if d.products %}
+      <div class="table-responsive" style="max-height: 20rem">
+      <table class="table table-sm align-middle mb-0">
+        <tbody>
+        {% for p, b in d.products %}
+          <tr><td><a href="/products/{{ p.id }}">{{ p.name }}</a></td><td class="num fw-semibold {% if b < 0 %}text-low{% endif %}">{{ fmt_qty(b, p.unit) }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <div class="card-body text-muted">{{ t('products.empty') }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header">{{ t('dashboard.chart_production') }}</div>
+    <div class="card-body"><div style="height: 220px"><canvas id="chart-production" role="img" aria-label="{{ t('dashboard.chart_production') }}"></canvas></div></div></div></div>
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header">{{ t('dashboard.chart_sales') }}</div>
+    <div class="card-body"><div style="height: 220px"><canvas id="chart-sales" role="img" aria-label="{{ t('dashboard.chart_sales') }}"></canvas></div></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-5"><div class="card h-100"><div class="card-header">{{ t('dashboard.chart_top_ingredients') }}</div>
+    <div class="card-body">
+      {% if d.top_ings %}<div style="height: {{ 40 + d.top_ings|length * 30 }}px"><canvas id="chart-top" role="img" aria-label="{{ t('dashboard.chart_top_ingredients') }}"></canvas></div>
+      {% else %}<div class="text-muted">{{ t('reports.no_data') }}</div>{% endif %}
+    </div></div></div>
+  <div class="col-xl-7"><div class="card h-100">
+    <div class="card-header d-flex justify-content-between"><span>{{ t('dashboard.recent_docs') }}</span><a href="/audit" class="small">{{ t('nav.audit') }} →</a></div>
+    {% if d.recent_docs %}
+    <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle mb-0">
+      <tbody>
+      {% for kind, doc in d.recent_docs %}
+        <tr class="row-link" data-href="{{ doc_url(kind, doc.id) }}">
+          <td class="text-muted small">{{ t('docs.kind.' ~ kind) }}</td>
+          <td class="fw-semibold"><a href="{{ doc_url(kind, doc.id) }}" class="text-decoration-none">{{ doc.number }}</a></td>
+          <td>{{ fmt_date(doc.date) }}</td>
+          <td class="small">{% if kind == 'production' %}{{ doc.product.name }}{% else %}{{ doc.counterparty.name if doc.counterparty else '' }}{% endif %}</td>
+          <td>{{ status_badge(doc.status) }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<div class="card-body text-muted">{{ t('docs.empty') }}</div>{% endif %}
+  </div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/docs.js"></script>
+<script src="/static/vendor/chart.umd.min.js"></script>
+<script>
+(function () {
+  // ერთი სერია თითო გრაფიკზე → ერთი ფერი, ლეგენდის გარეშე (სათაური ასახელებს); ბადე — მკრთალი
+  var ACCENT = "#2f6fde", GRID = "rgba(0,0,0,.06)", INK = "#5b6b7f";
+  Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+  Chart.defaults.color = INK;
+  function money(v) { return Num.fmt(v, 2) + " ₾"; }
+  var common = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return money(c.parsed.y != null && c.chart.options.indexAxis !== "y" ? c.parsed.y : c.parsed.x); } } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 } },
+      y: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { callback: function (v) { return Num.fmt(v, 0); } } }
+    }
+  };
+  var days = {{ d.chart_days | tojson }};
+  function bar(id, data) {
+    new Chart(document.getElementById(id), { type: "bar",
+      data: { labels: days, datasets: [{ data: data, backgroundColor: ACCENT, borderRadius: 4, maxBarThickness: 18 }] },
+      options: common });
+  }
+  bar("chart-production", {{ d.chart_production | tojson }});
+  bar("chart-sales", {{ d.chart_sales | tojson }});
+  var top = {{ d.top_ings | tojson }};
+  if (top.length) {
+    new Chart(document.getElementById("chart-top"), { type: "bar",
+      data: { labels: top.map(function (x) { return x[0].length > 24 ? x[0].slice(0, 23) + "…" : x[0]; }), datasets: [{ data: top.map(function (x) { return x[1]; }), backgroundColor: ACCENT, borderRadius: 4, maxBarThickness: 18 }] },
+      options: Object.assign({}, common, { indexAxis: "y", scales: {
+        x: { beginAtZero: true, grid: { color: GRID }, border: { display: false }, ticks: { callback: function (v) { return Num.fmt(v, 0); } } },
+        y: { grid: { display: false } } } }) });
+  }
+})();
+</script>
+{% endblock %}

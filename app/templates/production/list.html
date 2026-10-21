@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge %}
+{% block title %}{{ t('production.title') }}{% endblock %}
+{% block heading %}{{ t('production.title') }}{% endblock %}
+{% block actions %}<a href="/production/new" class="btn btn-success"><i class="bi bi-plus-lg me-1"></i>{{ t('production.new') }}</a>{% endblock %}
+{% block content %}
+{% with base_url='/production' %}{% include "partials/_doc_list_filters.html" %}{% endwith %}
+<div class="card">
+  {% if docs %}
+  <div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>{{ t('docs.number') }}</th><th>{{ t('common.date') }}</th><th>{{ t('recipes.product') }}</th>
+      <th class="num">{{ t('production.qty') }}</th><th class="num">{{ t('production.total_cost') }}</th><th>{{ t('common.status') }}</th></tr></thead>
+    <tbody>
+    {% for d in docs %}
+      <tr class="row-link {% if d.status.value == 'cancelled' %}text-decoration-line-through text-muted{% endif %}" data-href="/production/{{ d.id }}">
+        <td class="fw-semibold"><a href="/production/{{ d.id }}" class="text-decoration-none">{{ d.number }}</a></td>
+        <td>{{ fmt_date(d.date) }}</td><td>{{ d.product.name }}</td>
+        <td class="num">{{ fmt_qty(d.qty_base, d.product.unit) }}</td>
+        <td class="num">{{ fmt_money(d.total_cost) if d.status.value == 'confirmed' else '—' }}</td>
+        <td>{{ status_badge(d.status) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-gear-wide-connected big"></i><p class="mb-3">{{ t('docs.empty') }}</p>
+    <a class="btn btn-success" href="/production/new"><i class="bi bi-plus-lg me-1"></i>{{ t('production.new') }}</a></div>
+  {% endif %}
+</div>
+{% endblock %}

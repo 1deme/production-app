@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import errors_alert, field_errors %}
+{% set is_new = product is none %}
+{% block title %}{{ t('products.new_title') if is_new else t('products.edit_title') }}{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="/products">{{ t('products.title') }}</a></li>
+  {% if not is_new %}<li class="breadcrumb-item"><a href="/products/{{ product.id }}">{{ product.name }}</a></li>{% endif %}
+</ol></nav>
+{% endblock %}
+{% block heading %}{{ t('products.new_title') if is_new else t('products.edit_title') }}{% endblock %}
+
+{% block content %}
+{{ errors_alert(errors) }}
+<form method="post" action="{{ '/products/new' if is_new else '/products/' ~ product.id ~ '/edit' }}" novalidate>
+  <div class="card" style="max-width: 52rem">
+    <div class="card-body">
+      <div class="mb-3">
+        <label class="form-label" for="name">{{ t('products.name') }}<span class="req">*</span></label>
+        <input type="text" class="form-control form-control-lg {% if errors.get('name') %}is-invalid{% endif %}" id="name" name="name"
+               value="{{ values.name }}" maxlength="200" autofocus placeholder="{{ t('products.name_placeholder') }}">
+        {{ field_errors(errors, 'name') }}
+      </div>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label" for="unit_id">{{ t('products.unit') }}<span class="req">*</span></label>
+          <select class="form-select {% if errors.get('unit_id') %}is-invalid{% endif %}" id="unit_id" name="unit_id">
+            {% for kind in ['count', 'mass', 'volume'] %}
+              <optgroup label="{{ t('unit_kind.' ~ kind) }}">
+              {% for u in units if u.kind.value == kind %}
+                <option value="{{ u.id }}" {% if values.unit_id == u.id|string %}selected{% endif %}
+                        {% if kind_locked and u.kind != product.unit.kind %}disabled{% endif %}>{{ u.name }} — {{ u.full_name }}</option>
+              {% endfor %}
+              </optgroup>
+            {% endfor %}
+          </select>
+          {{ field_errors(errors, 'unit_id') }}
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="code">{{ t('products.code') }} <span class="text-muted fw-normal">({{ t('common.optional') }})</span></label>
+          <input type="text" class="form-control" id="code" name="code" value="{{ values.code }}" maxlength="64">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="barcode">{{ t('ingredients.barcode') }} <span class="text-muted fw-normal">({{ t('common.optional') }})</span></label>
+          <input type="text" class="form-control {% if errors.get('barcode') %}is-invalid{% endif %}" id="barcode" name="barcode" value="{{ values.barcode }}" maxlength="64"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();}">
+          {{ field_errors(errors, 'barcode') }}
+        </div>
+      </div>
+      <div class="mt-3">
+        <label class="form-label" for="note">{{ t('common.note') }}</label>
+        <textarea class="form-control" id="note" name="note" rows="2">{{ values.note }}</textarea>
+      </div>
+      {% if is_new %}<div class="form-text mt-3"><i class="bi bi-info-circle me-1"></i>{{ t('products.recipe_next_hint') }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="d-flex gap-2 mt-3">
+    <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-lg me-1"></i>{{ t('common.save') }}</button>
+    <a href="{{ '/products' if is_new else '/products/' ~ product.id }}" class="btn btn-link btn-lg">{{ t('common.cancel') }}</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% set is_new = ingredient is none %}
+{% block title %}{{ t('ingredients.new_title') if is_new else t('ingredients.edit_title') }}{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="/ingredients">{{ t('ingredients.title') }}</a></li>
+  {% if not is_new %}<li class="breadcrumb-item"><a href="/ingredients/{{ ingredient.id }}">{{ ingredient.name }}</a></li>{% endif %}
+</ol></nav>
+{% endblock %}
+{% block heading %}{{ t('ingredients.new_title') if is_new else t('ingredients.edit_title') }}{% endblock %}
+
+{% macro field_errors(name) %}
+  {% for e in errors.get(name, []) %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+{% endmacro %}
+
+{% block content %}
+{% if errors %}
+<div class="alert alert-danger d-flex gap-2 align-items-start" role="alert">
+  <i class="bi bi-exclamation-triangle-fill"></i><div>{{ t('common.form_has_errors') }}</div>
+</div>
+{% endif %}
+
+<form method="post" action="{{ '/ingredients/new' if is_new else '/ingredients/' ~ ingredient.id ~ '/edit' }}" novalidate id="ingredient-form">
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header">{{ t('ingredients.info') }}</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label" for="name">{{ t('ingredients.name') }}<span class="req">*</span></label>
+          <input type="text" class="form-control form-control-lg {% if errors.get('name') %}is-invalid{% endif %}"
+                 id="name" name="name" value="{{ values.name }}" maxlength="200" required
+                 placeholder="{{ t('ingredients.name_placeholder') }}" {% if not values.name or errors.get('name') %}autofocus{% endif %}>
+          {{ field_errors('name') }}
+        </div>
+
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <label class="form-label" for="unit_id">{{ t('ingredients.unit') }}<span class="req">*</span></label>
+            <select class="form-select {% if errors.get('unit_id') %}is-invalid{% endif %}" id="unit_id" name="unit_id">
+              {% for kind in ['mass', 'volume', 'count'] %}
+                <optgroup label="{{ t('unit_kind.' ~ kind) }}">
+                {% for u in units if u.kind.value == kind %}
+                  <option value="{{ u.id }}" data-short="{{ u.name }}"
+                          {% if values.unit_id == u.id|string %}selected{% endif %}
+                          {% if kind_locked and u.kind != locked_kind %}disabled{% endif %}>{{ u.name }} — {{ u.full_name }}</option>
+                {% endfor %}
+                </optgroup>
+              {% endfor %}
+            </select>
+            {{ field_errors('unit_id') }}
+            <div class="form-text">{{ t('ingredients.unit_help') }}</div>
+          </div>
+          <div class="col-sm-6">
+            <label class="form-label" for="min_stock">{{ t('ingredients.min_stock') }}</label>
+            <div class="input-group has-validation">
+              <input type="text" inputmode="decimal" class="form-control num {% if errors.get('min_stock') %}is-invalid{% endif %}"
+                     id="min_stock" name="min_stock" value="{{ values.min_stock }}" placeholder="0" autocomplete="off">
+              <span class="input-group-text" id="min_stock_unit"></span>
+            </div>
+            {{ field_errors('min_stock') }}
+            <div class="form-text">{{ t('ingredients.min_stock_help') }}</div>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label" for="note">{{ t('common.note') }} <span class="text-muted fw-normal">({{ t('common.optional') }})</span></label>
+          <textarea class="form-control" id="note" name="note" rows="2">{{ values.note }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-upc-scan me-1"></i>{{ t('ingredients.barcodes') }}</div>
+      <div class="card-body">
+        <div id="barcode-list">
+          {% for code in values.barcodes %}
+          <div class="input-group barcode-row">
+            <input type="text" class="form-control barcode-input {% if errors.get('barcodes') %}is-invalid{% endif %}" name="barcode" value="{{ code }}"
+                   placeholder="{{ t('ingredients.barcode_placeholder') }}" autocomplete="off" maxlength="64"
+                   {% if values.name and not errors.get('name') and loop.first and not code %}autofocus{% endif %}>
+            <button type="button" class="btn btn-outline-secondary remove-barcode" title="{{ t('common.remove') }}" aria-label="{{ t('common.remove') }}"><i class="bi bi-x-lg"></i></button>
+          </div>
+          {% endfor %}
+        </div>
+        {{ field_errors('barcodes') }}
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-barcode"><i class="bi bi-plus-lg me-1"></i>{{ t('ingredients.add_barcode') }}</button>
+        <div class="form-text mt-2">{{ t('ingredients.barcode_help') }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex gap-2 mt-3 flex-wrap">
+  <button type="submit" class="btn btn-primary btn-lg" name="action" value="save"><i class="bi bi-check-lg me-1"></i>{{ t('common.save') }}</button>
+  {% if is_new %}
+  <button type="submit" class="btn btn-outline-primary btn-lg" name="action" value="save_new">{{ t('common.save_and_new') }}</button>
+  {% endif %}
+  <a href="{{ '/ingredients' if is_new else '/ingredients/' ~ ingredient.id }}" class="btn btn-link btn-lg">{{ t('common.cancel') }}</a>
+</div>
+</form>
+
+<template id="barcode-row-tpl">
+  <div class="input-group barcode-row">
+    <input type="text" class="form-control barcode-input" name="barcode" placeholder="{{ t('ingredients.barcode_placeholder') }}" autocomplete="off" maxlength="64">
+    <button type="button" class="btn btn-outline-secondary remove-barcode" title="{{ t('common.remove') }}" aria-label="{{ t('common.remove') }}"><i class="bi bi-x-lg"></i></button>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var list = document.getElementById("barcode-list");
+  var tpl = document.getElementById("barcode-row-tpl");
+
+  function addRow(focus) {
+    var node = tpl.content.firstElementChild.cloneNode(true);
+    list.appendChild(node);
+    if (focus) node.querySelector("input").focus();
+    return node;
+  }
+  document.getElementById("add-barcode").addEventListener("click", function () {
+    var empty = Array.prototype.find.call(list.querySelectorAll(".barcode-input"), function (i) { return !i.value.trim(); });
+    if (empty) empty.focus(); else addRow(true);
+  });
+  list.addEventListener("click", function (e) {
+    var btn = e.target.closest(".remove-barcode");
+    if (!btn) return;
+    var rows = list.querySelectorAll(".barcode-row");
+    if (rows.length > 1) btn.closest(".barcode-row").remove();
+    else rows[0].querySelector("input").value = "";
+  });
+  // სკანერი ბოლოს აგზავნის Enter-ს — შტრიხკოდის ველში ის ფორმას არ ინახავს, არამედ ახალ ველზე გადადის
+  list.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || !e.target.classList.contains("barcode-input")) return;
+    e.preventDefault();
+    if (!e.target.value.trim()) return;
+    var inputs = Array.prototype.slice.call(list.querySelectorAll(".barcode-input"));
+    var next = inputs.slice(inputs.indexOf(e.target) + 1).find(function (i) { return !i.value.trim(); });
+    if (next) next.focus(); else addRow(true);
+  });
+
+  // მინიმალური ნაშთის ველთან ერთეულის ჩვენება
+  var unit = document.getElementById("unit_id"), suffix = document.getElementById("min_stock_unit");
+  function updateSuffix() {
+    var opt = unit.options[unit.selectedIndex];
+    suffix.textContent = opt ? opt.dataset.short : "";
+  }
+  unit.addEventListener("change", updateSuffix);
+  updateSuffix();
+})();
+</script>
+{% endblock %}

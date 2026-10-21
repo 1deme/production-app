@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge, doc_header_info %}
+{% block title %}{{ doc.number }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/dispatch">{{ t('dispatch.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ t('dispatch.doc_title', number=doc.number) }} {{ status_badge(doc.status) }}{% endblock %}
+{% block actions %}
+  {% set st = doc.status.value %}
+  {% if st == 'draft' %}<form method="post" action="/dispatch/{{ doc.id }}/confirm"><button class="btn btn-success"><i class="bi bi-check2-all me-1"></i>{{ t('docs.confirm') }}</button></form>{% endif %}
+  {% if st != 'cancelled' %}<a href="/dispatch/{{ doc.id }}/edit" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>{{ t('common.edit') }}</a>{% endif %}
+  <a href="/dispatch/{{ doc.id }}/pdf" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i>{{ t('docs.print_pdf') }}</a>
+  {% if st == 'confirmed' %}
+    <form method="post" action="/dispatch/{{ doc.id }}/cancel" data-confirm="{{ t('docs.confirm_cancel', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancel_doc') }}</button></form>
+  {% elif st == 'draft' %}
+    <form method="post" action="/dispatch/{{ doc.id }}/delete" data-confirm="{{ t('docs.confirm_delete', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{{ t('common.delete') }}</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+{% if doc.status.value == 'draft' %}<div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>{{ t('docs.draft_notice') }}</div>{% endif %}
+{% if doc.status.value == 'cancelled' %}<div class="alert alert-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancelled_notice') }}</div>{% endif %}
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card mb-3"><div class="card-body">
+      <dl class="info row mb-0">
+        <div class="col-sm-3"><dt>{{ t('common.date') }}</dt><dd>{{ fmt_date(doc.date) }}</dd></div>
+        <div class="col-sm-5"><dt>{{ t('dispatch.customer') }}</dt><dd>{{ doc.counterparty.name if doc.counterparty else '—' }}</dd></div>
+        <div class="col-sm-4"><dt>{{ t('docs.total') }}</dt><dd class="fs-5 fw-semibold">{{ fmt_money(doc.total) }}</dd></div>
+        {% if doc.note %}<div class="col-12"><dt>{{ t('common.note') }}</dt><dd>{{ doc.note }}</dd></div>{% endif %}
+      </dl>
+      {{ doc_header_info(doc) }}
+    </div></div>
+    <div class="card">
+      <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>#</th><th>{{ t('nav.products') }}</th><th class="num">{{ t('docs.qty') }}</th><th class="num">{{ t('dispatch.price') }}</th><th class="num">{{ t('receipts.amount') }}</th></tr></thead>
+        <tbody>
+        {% for ln in doc.lines %}
+          <tr><td class="text-muted">{{ loop.index }}</td><td><a href="/products/{{ ln.product.id }}">{{ ln.product.name }}</a></td>
+            <td class="num">{{ fmt_qty(ln.qty_base, ln.product.unit) }}</td>
+            <td class="num">{{ fmt_price(ln.unit_price) if ln.unit_price is not none else '—' }}</td>
+            <td class="num">{{ fmt_money(ln.amount) if ln.amount is not none else '—' }}</td></tr>
+        {% endfor %}
+        </tbody>
+        <tfoot><tr class="fw-semibold"><td colspan="4" class="text-end">{{ t('docs.total') }}</td><td class="num">{{ fmt_money(doc.total) }}</td></tr></tfoot>
+      </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl-4"><div class="card"><div class="card-header"><i class="bi bi-clock-history me-1"></i>{{ t('common.history') }}</div>
+    {% with entries=audit_entries %}{% include "partials/_history.html" %}{% endwith %}</div></div>
+</div>
+{% endblock %}

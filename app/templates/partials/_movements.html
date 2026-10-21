@@ -1,0 +1,26 @@
+{# მოძრაობის ისტორია. საჭიროა: history (HistoryRow-ები), unit #}
+{% if history %}
+<div class="table-responsive" style="max-height: 28rem">
+  <table class="table table-sm table-hover align-middle">
+    <thead class="sticky-top"><tr>
+      <th>{{ t('common.date') }}</th><th>{{ t('stock.movement_type') }}</th><th>{{ t('docs.document') }}</th>
+      <th class="num">{{ t('stock.in') }}</th><th class="num">{{ t('stock.out') }}</th><th class="num">{{ t('stock.balance_after') }}</th>
+    </tr></thead>
+    <tbody>
+    {% for h in history %}
+      {% set m = h.movement %}
+      <tr>
+        <td class="text-nowrap">{{ fmt_date(m.date) }}</td>
+        <td>{{ movement_label(m.movement_type) }}</td>
+        <td><a href="{{ doc_url(m.doc_type, m.doc_id) }}">{{ m.doc_number }}</a></td>
+        <td class="num text-success">{% if m.qty > 0 %}+{{ fmt_qty(m.qty, unit) }}{% endif %}</td>
+        <td class="num text-danger">{% if m.qty < 0 %}−{{ fmt_qty(-m.qty, unit) }}{% endif %}</td>
+        <td class="num fw-semibold {% if h.balance_after < 0 %}text-low{% endif %}">{{ fmt_qty(h.balance_after, unit) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card-body text-muted small">{{ t('stock.no_movements') }}</div>
+{% endif %}

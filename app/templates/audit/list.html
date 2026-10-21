@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ t('audit.title') }}{% endblock %}
+{% block heading %}{{ t('audit.title') }}{% endblock %}
+{% macro val(v) %}{% if v is sameas true %}{{ t('common.yes') }}{% elif v is sameas false %}{{ t('common.no') }}{% elif v is none or v == '' %}{{ t('common.empty') }}{% else %}{{ v }}{% endif %}{% endmacro %}
+
+{% block actions %}
+<form method="get" action="/audit" class="d-flex gap-2">
+  <select name="entity" class="form-select" onchange="this.form.submit()" aria-label="{{ t('audit.object') }}">
+    <option value="">{{ t('audit.filter_all') }}</option>
+    {% for en in entities %}<option value="{{ en }}" {% if entity == en %}selected{% endif %}>{{ t('audit.entity.' ~ en) }}</option>{% endfor %}
+  </select>
+</form>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  {% if entries %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead><tr>
+        <th>{{ t('audit.time') }}</th><th>{{ t('audit.user') }}</th><th>{{ t('audit.action') }}</th>
+        <th>{{ t('audit.object') }}</th><th>{{ t('audit.changes') }}</th>
+      </tr></thead>
+      <tbody>
+      {% for e in entries %}
+        <tr>
+          <td class="text-nowrap">{{ fmt_datetime(e.created_at) }}</td>
+          <td>{{ e.username or t('audit.system_user') }}</td>
+          <td>{{ t('audit.action.' ~ e.action) }}</td>
+          <td>
+            {{ t('audit.entity.' ~ e.entity) }}:
+            {% set url = entity_url(e) %}{% if url %}<a href="{{ url }}">{{ e.entity_label }}</a>{% else %}{{ e.entity_label }}{% endif %}
+          </td>
+          <td>
+            {% set ch = parse_changes(e) %}
+            {% if ch and e.action in ('update', 'confirm', 'cancel') %}
+            <ul class="changes">
+              {% for field, pair in ch.items() %}
+              <li>{{ t('audit.field.' ~ field) }}: <span class="old">{{ val(pair[0]) }}</span> → <span class="new">{{ val(pair[1]) }}</span></li>
+              {% endfor %}
+            </ul>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if entries|length >= limit %}<div class="card-footer bg-white small text-muted">{{ t('audit.shown_last', n=limit) }}</div>{% endif %}
+  {% else %}
+  <div class="empty-state"><i class="bi bi-clock-history big"></i>{{ t('audit.empty') }}</div>
+  {% endif %}
+</div>
+{% endblock %}

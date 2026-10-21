@@ -1,0 +1,24 @@
+{# ცვლილებების სია. საჭიროა: entries, parse_changes #}
+{% macro val(v) %}{% if v is sameas true %}{{ t('common.yes') }}{% elif v is sameas false %}{{ t('common.no') }}{% elif v is none or v == '' %}{{ t('common.empty') }}{% else %}{{ v }}{% endif %}{% endmacro %}
+{% if entries %}
+<ul class="list-group list-group-flush">
+  {% for e in entries %}
+  <li class="list-group-item">
+    <div class="d-flex justify-content-between small gap-2">
+      <span class="fw-semibold">{{ t('audit.action.' ~ e.action) }}{% if show_object %} · {{ t('audit.entity.' ~ e.entity) }}: {{ e.entity_label }}{% endif %}</span>
+      <span class="text-muted text-nowrap">{{ fmt_datetime(e.created_at) }} · {{ e.username or t('audit.system_user') }}</span>
+    </div>
+    {% set ch = parse_changes(e) %}
+    {% if ch and e.action in ('update', 'confirm', 'cancel') %}
+    <ul class="changes mt-1">
+      {% for field, pair in ch.items() %}
+      <li>{{ t('audit.field.' ~ field) }}: <span class="old">{{ val(pair[0]) }}</span> → <span class="new">{{ val(pair[1]) }}</span></li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="card-body text-muted small">{{ t('common.no_history') }}</div>
+{% endif %}

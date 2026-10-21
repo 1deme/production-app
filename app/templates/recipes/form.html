@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import errors_alert, field_errors, picker %}
+{% set is_new = recipe is none %}
+{% block title %}{{ t('recipes.editor') }}{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="/recipes">{{ t('recipes.title') }}</a></li>
+  {% if product %}<li class="breadcrumb-item"><a href="/products/{{ product.id }}">{{ product.name }}</a></li>{% endif %}
+</ol></nav>
+{% endblock %}
+{% block heading %}{{ t('recipes.editor') }}{% if recipe %} · v{{ recipe.version }}{% endif %}{% endblock %}
+
+{% block content %}
+{{ errors_alert(errors) }}
+<form method="post" action="{{ '/recipes/new' if is_new else '/recipes/' ~ recipe.id ~ '/edit' }}" data-doc-form novalidate>
+<div class="row g-3">
+  <div class="col-xl-4">
+    <div class="card">
+      <div class="card-header">{{ t('recipes.parameters') }}</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label" for="product_id">{{ t('recipes.product') }}<span class="req">*</span></label>
+          {% if is_new and not product %}
+            <select class="form-select {% if errors.get('product_id') %}is-invalid{% endif %}" id="product_id" name="product_id" onchange="document.getElementById('yield-unit').textContent=this.selectedOptions[0].dataset.unit||''">
+              <option value="">{{ t('recipes.choose_product') }}</option>
+              {% for p in products if not p.active_recipe %}<option value="{{ p.id }}" data-unit="{{ p.unit.name }}" {% if values.product_id == p.id|string %}selected{% endif %}>{{ p.name }}</option>{% endfor %}
+            </select>
+            {{ field_errors(errors, 'product_id') }}
+            <div class="form-text">{{ t('recipes.only_without_recipe') }} <a href="/products/new">{{ t('products.new') }}</a></div>
+          {% else %}
+            <input type="hidden" name="product_id" value="{{ product.id }}">
+            <div class="form-control-plaintext fw-semibold">{{ product.name }}</div>
+          {% endif %}
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="yield_qty">{{ t('recipes.yield') }}<span class="req">*</span></label>
+          <div class="input-group">
+            <input type="text" inputmode="decimal" class="form-control num {% if errors.get('yield_qty') %}is-invalid{% endif %}" id="yield_qty" name="yield_qty" value="{{ values.yield_qty }}">
+            <span class="input-group-text" id="yield-unit">{{ product.unit.name if product else '' }}</span>
+          </div>
+          {{ field_errors(errors, 'yield_qty') }}
+          <div class="form-text">{{ t('recipes.yield_help') }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="waste_percent">{{ t('recipes.waste') }}</label>
+          <div class="input-group">
+            <input type="text" inputmode="decimal" class="form-control num {% if errors.get('waste_percent') %}is-invalid{% endif %}" id="waste_percent" name="waste_percent" value="{{ values.waste_percent }}">
+            <span class="input-group-text">%</span>
+          </div>
+          {{ field_errors(errors, 'waste_percent') }}
+          <div class="form-text">{{ t('recipes.waste_help') }}</div>
+        </div>
+        <div>
+          <label class="form-label" for="note">{{ t('common.note') }}</label>
+          <textarea class="form-control" id="note" name="note" rows="2">{{ values.note }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between"><span>{{ t('recipes.ingredients_per_batch') }}</span><span class="text-muted small">{{ t('docs.lines_count') }}: <span data-line-count>0</span></span></div>
+      <div class="card-body pb-2">
+        {{ picker('/api/ingredients/lookup', '/recipes/line-row', '#lines', t('docs.picker_placeholder_ingredient'), create=true) }}
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>{{ t('nav.ingredients') }}</th><th>{{ t('docs.qty') }}</th><th>{{ t('docs.unit') }}</th><th class="num">{{ t('recipes.cost') }}</th><th></th></tr></thead>
+          <tbody id="lines">
+            {% for ln in lines %}{% with cost=costs.get(ln.ingredient.id), idx=loop.index %}{% include "recipes/_line.html" %}{% endwith %}{% endfor %}
+          </tbody>
+          <tfoot>
+            <tr data-empty-lines {% if lines %}hidden{% endif %}><td colspan="5" class="text-center text-muted py-4">{{ t('recipes.empty_lines') }}</td></tr>
+            <tr class="fw-semibold"><td colspan="3">{{ t('recipes.batch_total') }}</td><td class="num" data-total>—</td><td></td></tr>
+            <tr><td colspan="3">{{ t('recipes.per_product_unit') }}</td><td class="num fw-semibold" data-unit-cost>—</td><td></td></tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="card-footer bg-white small text-muted"><i class="bi bi-info-circle me-1"></i>{{ t('recipes.cost_hint') }}</div>
+    </div>
+  </div>
+</div>
+<div class="d-flex gap-2 mt-3">
+  <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-lg me-1"></i>{{ t('common.save') }}</button>
+  <a href="{{ '/recipes' if is_new else '/recipes/' ~ recipe.id }}" class="btn btn-link btn-lg">{{ t('common.cancel') }}</a>
+</div>
+</form>
+{% include "partials/_quick_ingredient.html" %}
+{% endblock %}
+{% block scripts %}<script src="/static/js/docs.js"></script>{% endblock %}

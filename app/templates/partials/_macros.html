@@ -1,0 +1,57 @@
+{% macro status_badge(status) %}
+  {% set cls = {'draft': 'text-bg-secondary', 'confirmed': 'text-bg-success', 'cancelled': 'text-bg-danger'}[status.value] %}
+  <span class="badge {{ cls }}">{{ status_label(status) }}</span>
+{% endmacro %}
+
+{% macro errors_alert(errors) %}
+  {% if errors %}
+  <div class="alert alert-danger" role="alert">
+    <div class="fw-semibold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ t('common.form_has_errors') }}</div>
+    <ul class="mb-0 ps-3">
+      {% for field, msgs in errors.items() %}{% for m in msgs %}<li>{{ m }}</li>{% endfor %}{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+{% endmacro %}
+
+{% macro field_errors(errors, name) %}
+  {% for e in errors.get(name, []) %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+{% endmacro %}
+
+{% macro date_input(name, value, errors, label) %}
+  <label class="form-label" for="{{ name }}">{{ label }}<span class="req">*</span></label>
+  <input type="text" class="form-control date-input {% if errors.get(name) %}is-invalid{% endif %}" id="{{ name }}" name="{{ name }}"
+         value="{{ value }}" placeholder="{{ t('common.date_placeholder') }}" autocomplete="off" inputmode="numeric" maxlength="10">
+  {{ field_errors(errors, name) }}
+{% endmacro %}
+
+{% macro period_filter(action, date_from, date_to, extra='') %}
+<form method="get" action="{{ action }}" class="row g-2 align-items-end">
+  <div class="col-auto">
+    <label class="form-label small mb-0" for="date_from">{{ t('common.date_from') }}</label>
+    <input type="text" class="form-control date-input" id="date_from" name="date_from" value="{{ date_from }}" placeholder="{{ t('common.date_placeholder') }}" style="width: 9rem">
+  </div>
+  <div class="col-auto">
+    <label class="form-label small mb-0" for="date_to">{{ t('common.date_to') }}</label>
+    <input type="text" class="form-control date-input" id="date_to" name="date_to" value="{{ date_to }}" placeholder="{{ t('common.date_placeholder') }}" style="width: 9rem">
+  </div>
+  {{ extra }}
+  <div class="col-auto"><button class="btn btn-outline-primary" type="submit"><i class="bi bi-funnel me-1"></i>{{ t('common.filter') }}</button></div>
+</form>
+{% endmacro %}
+
+{% macro picker(lookup, row_url, target, placeholder, create=false) %}
+<div class="picker" data-picker data-lookup="{{ lookup }}" data-row-url="{{ row_url }}" data-target="{{ target }}"
+     data-not-found="{{ t('docs.picker_not_found') }}" {% if create %}data-create="1" data-create-label="{{ t('docs.picker_create') }}"{% endif %}>
+  <div class="search-box">
+    <i class="bi bi-search"></i>
+    <input type="search" class="form-control picker-input" placeholder="{{ placeholder }}" autocomplete="off" aria-label="{{ placeholder }}">
+    <i class="bi bi-upc-scan"></i>
+  </div>
+  <div class="picker-menu list-group shadow" hidden></div>
+</div>
+{% endmacro %}
+
+{% macro doc_header_info(doc) %}
+  <span class="text-muted small">{{ t('common.created_at') }}: {{ fmt_datetime(doc.created_at) }}{% if doc.confirmed_at %} · {{ t('docs.confirmed_at') }}: {{ fmt_datetime(doc.confirmed_at) }}{% endif %}</span>
+{% endmacro %}

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge, doc_header_info %}
+{% block title %}{{ doc.number }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/production">{{ t('production.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ t('production.doc_title', number=doc.number) }} {{ status_badge(doc.status) }}{% endblock %}
+{% block actions %}
+  {% set st = doc.status.value %}
+  {% if st == 'draft' %}<form method="post" action="/production/{{ doc.id }}/confirm"><button class="btn btn-success"><i class="bi bi-check2-all me-1"></i>{{ t('docs.confirm') }}</button></form>{% endif %}
+  {% if st != 'cancelled' %}<a href="/production/{{ doc.id }}/edit" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>{{ t('common.edit') }}</a>{% endif %}
+  {% if st == 'confirmed' %}
+    <form method="post" action="/production/{{ doc.id }}/cancel" data-confirm="{{ t('production.confirm_cancel', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancel_doc') }}</button></form>
+  {% elif st == 'draft' %}
+    <form method="post" action="/production/{{ doc.id }}/delete" data-confirm="{{ t('docs.confirm_delete', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{{ t('common.delete') }}</button></form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if doc.status.value == 'draft' %}<div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>{{ t('production.draft_notice') }}</div>{% endif %}
+{% if doc.status.value == 'cancelled' %}<div class="alert alert-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancelled_notice') }}</div>{% endif %}
+{% set u = doc.product.unit %}
+<div class="row g-3 mb-3">
+  <div class="col-md-4"><div class="card card-body h-100"><div class="stat"><i class="bi bi-box-seam"></i><div>
+    <div class="value">{{ fmt_qty(doc.qty_base, u) }}</div><div class="label"><a href="/products/{{ doc.product.id }}">{{ doc.product.name }}</a> · {{ fmt_date(doc.date) }}</div></div></div></div></div>
+  {% if doc.status.value == 'confirmed' %}
+  <div class="col-md-4"><div class="card card-body h-100"><div class="stat"><i class="bi bi-cash-coin"></i><div>
+    <div class="value">{{ fmt_money(doc.total_cost) }}</div><div class="label">{{ t('production.total_cost') }}</div></div></div></div></div>
+  <div class="col-md-4"><div class="card card-body h-100"><div class="stat"><i class="bi bi-calculator"></i><div>
+    <div class="value">{{ fmt_price(doc.unit_cost * u.factor) }}</div><div class="label">{{ t('production.cost_per', unit=u.name) }}</div></div></div></div></div>
+  {% endif %}
+</div>
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header">{{ t('production.consumed') }}{% if doc.recipe %} · <a href="/recipes/{{ doc.recipe.id }}">{{ t('production.recipe_used', v=doc.recipe.version) }}</a>{% endif %}</div>
+      <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>{{ t('nav.ingredients') }}</th><th class="num">{{ t('production.planned') }}</th><th class="num">{{ t('production.actual') }}</th>
+          {% if doc.status.value == 'confirmed' %}<th class="num">{{ t('recipes.unit_price') }}</th><th class="num">{{ t('recipes.cost') }}</th>{% endif %}</tr></thead>
+        <tbody>
+        {% for ln in doc.lines %}
+          {% set iu = ln.ingredient.unit %}
+          <tr><td><a href="/ingredients/{{ ln.ingredient.id }}">{{ ln.ingredient.name }}</a></td>
+            <td class="num text-muted">{{ fmt_qty(ln.planned_qty_base, iu) }}</td>
+            <td class="num fw-semibold {% if ln.qty_base != ln.planned_qty_base %}text-warning-emphasis{% endif %}">{{ fmt_qty(ln.qty_base, iu) }}</td>
+            {% if doc.status.value == 'confirmed' %}<td class="num">{{ fmt_price(ln.unit_cost * iu.factor) }} / {{ iu.name }}</td><td class="num">{{ fmt_money(ln.amount) }}</td>{% endif %}
+          </tr>
+        {% endfor %}
+        </tbody>
+        {% if doc.status.value == 'confirmed' %}<tfoot><tr class="fw-semibold"><td colspan="4" class="text-end">{{ t('docs.total') }}</td><td class="num">{{ fmt_money(doc.total_cost) }}</td></tr></tfoot>{% endif %}
+      </table>
+      </div>
+      <div class="card-footer bg-white">{{ doc_header_info(doc) }}{% if doc.note %}<div class="mt-1">{{ t('common.note') }}: {{ doc.note }}</div>{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-xl-4">
+    <div class="card"><div class="card-header"><i class="bi bi-clock-history me-1"></i>{{ t('common.history') }}</div>
+      {% with entries=audit_entries %}{% include "partials/_history.html" %}{% endwith %}</div>
+  </div>
+</div>
+{% endblock %}

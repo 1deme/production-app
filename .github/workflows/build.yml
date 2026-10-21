@@ -1,0 +1,73 @@
+# Windows-ის .exe-ის ავტომატური აწყობა და გამოქვეყნება.
+#
+# ახალი ვერსიის გამოსაქვეყნებლად:  git tag v1.0.0 && git push origin v1.0.0
+# შედეგი: GitHub → Releases → WarmoebisAghricxva.exe
+# მუდმივი ლინკი ბოლო ვერსიაზე:  https://github.com/<მომხმარებელი>/<რეპო>/releases/latest/download/WarmoebisAghricxva.exe
+#
+# „Actions“ ჩანართიდან ხელით გაშვებისას (Run workflow) .exe მხოლოდ აიწყობა და ჩამოსატვირთად დაიდება
+# Artifacts-ში — Release არ შეიქმნება.
+name: build-windows-exe
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # Release-ის შესაქმნელად
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: ბიბლიოთეკების ინსტალაცია
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller==6.11.1
+
+      - name: ტესტები
+        run: python -m pytest -q -p no:warnings
+
+      - name: .exe-ის აწყობა
+        run: pyinstaller --noconfirm --clean production_app.spec
+
+      - name: შემოწმება — .exe ეშვება და გვერდები იხსნება
+        shell: pwsh
+        run: |
+          $env:APP_PORT = "8799"
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP\appdata"
+          $p = Start-Process -FilePath "dist\WarmoebisAghricxva.exe" -ArgumentList "--no-browser" -PassThru
+          $ok = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            Start-Sleep -Seconds 1
+            try { $r = Invoke-WebRequest -Uri "http://127.0.0.1:8799/" -UseBasicParsing; if ($r.StatusCode -eq 200) { $ok = $true; break } } catch {}
+          }
+          if (-not $ok) { Stop-Process -Id $p.Id -Force; throw ".exe არ გაეშვა" }
+          foreach ($u in @("/ingredients", "/receipts/new", "/production/new", "/reports/movement?format=pdf", "/reports/movement?format=xlsx", "/settings")) {
+            $r = Invoke-WebRequest -Uri "http://127.0.0.1:8799$u" -UseBasicParsing
+            if ($r.StatusCode -ne 200) { Stop-Process -Id $p.Id -Force; throw "$u → $($r.StatusCode)" }
+            Write-Host "OK $u"
+          }
+          Stop-Process -Id $p.Id -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WarmoebisAghricxva
+          path: dist/WarmoebisAghricxva.exe
+
+      - name: Release-ის გამოქვეყნება
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/WarmoebisAghricxva.exe \
+            --title "წარმოების აღრიცხვა $GITHUB_REF_NAME" \
+            --notes-file RELEASE_NOTES.md

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge, doc_header_info %}
+{% block title %}{{ doc.number }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/inventory">{{ t('inventory.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ t('inventory.doc_title', number=doc.number) }} {{ status_badge(doc.status) }}{% endblock %}
+{% block actions %}
+  {% set st = doc.status.value %}
+  {% if st == 'draft' %}
+    <form method="post" action="/inventory/{{ doc.id }}/confirm" data-confirm="{{ t('inventory.confirm_q') }}" data-confirm-style="btn-success"><button class="btn btn-success"><i class="bi bi-check2-all me-1"></i>{{ t('docs.confirm') }}</button></form>
+    <a href="/inventory/{{ doc.id }}/edit" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>{{ t('common.edit') }}</a>
+    <form method="post" action="/inventory/{{ doc.id }}/delete" data-confirm="{{ t('docs.confirm_delete', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{{ t('common.delete') }}</button></form>
+  {% elif st == 'confirmed' %}
+    <form method="post" action="/inventory/{{ doc.id }}/cancel" data-confirm="{{ t('docs.confirm_cancel', number=doc.number) }}"><button class="btn btn-outline-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancel_doc') }}</button></form>
+  {% endif %}
+{% endblock %}
+{% block content %}
+{% if doc.status.value == 'draft' %}<div class="alert alert-info"><i class="bi bi-info-circle me-1"></i>{{ t('docs.draft_notice') }}</div>{% endif %}
+{% if doc.status.value == 'cancelled' %}<div class="alert alert-danger"><i class="bi bi-x-octagon me-1"></i>{{ t('docs.cancelled_notice') }}</div>{% endif %}
+{% if doc.status.value == 'confirmed' %}<div class="alert alert-secondary small"><i class="bi bi-lock me-1"></i>{{ t('inventory.confirmed_locked') }}</div>{% endif %}
+<div class="row g-3">
+  <div class="col-xl-8">
+    <div class="card">
+      <div class="card-header">{{ fmt_date(doc.date) }} · {{ t('inventory.of_ingredients') if doc.item_type.value == 'ingredient' else t('inventory.of_products') }}</div>
+      <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>{{ t('inventory.item') }}</th><th class="num">{{ t('inventory.system') }}</th><th class="num">{{ t('inventory.actual') }}</th><th class="num">{{ t('inventory.diff') }}</th></tr></thead>
+        <tbody>
+        {% for ln in doc.lines %}
+          {% set it = ln.item %}
+          <tr><td><a href="/{{ 'ingredients' if ln.ingredient else 'products' }}/{{ it.id }}">{{ it.name }}</a></td>
+            <td class="num">{{ fmt_qty(ln.system_qty_base, it.unit) if ln.system_qty_base is not none else '—' }}</td>
+            <td class="num fw-semibold">{{ fmt_qty(ln.actual_qty_base, it.unit) }}</td>
+            <td class="num fw-semibold {% if ln.diff_qty_base and ln.diff_qty_base < 0 %}text-danger{% elif ln.diff_qty_base and ln.diff_qty_base > 0 %}text-success{% endif %}">
+              {% if ln.diff_qty_base is none %}—{% elif ln.diff_qty_base > 0 %}+{{ fmt_qty(ln.diff_qty_base, it.unit) }}{% else %}{{ fmt_qty(ln.diff_qty_base, it.unit) }}{% endif %}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <div class="card-footer bg-white">{{ doc_header_info(doc) }}{% if doc.note %}<div class="mt-1">{{ t('common.note') }}: {{ doc.note }}</div>{% endif %}</div>
+    </div>
+  </div>
+  <div class="col-xl-4"><div class="card"><div class="card-header"><i class="bi bi-clock-history me-1"></i>{{ t('common.history') }}</div>
+    {% with entries=audit_entries %}{% include "partials/_history.html" %}{% endwith %}</div></div>
+</div>
+{% endblock %}

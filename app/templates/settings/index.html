@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ t('settings.title') }}{% endblock %}
+{% block heading %}{{ t('settings.title') }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-gear me-1"></i>{{ t('settings.general') }}</div>
+      <form method="post" action="/settings/general" class="card-body">
+        {% for key, (default, allowed) in options.items() %}
+        <fieldset class="mb-3">
+          <legend class="form-label fs-6">{{ t('settings.' ~ key) }}</legend>
+          {% for v in allowed %}
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="{{ key }}" id="{{ key }}-{{ v }}" value="{{ v }}" {% if values[key] == v %}checked{% endif %}>
+            <label class="form-check-label" for="{{ key }}-{{ v }}"><span class="fw-semibold">{{ t('settings.' ~ key ~ '.' ~ v) }}</span>
+              {% if v == default %}<span class="badge text-bg-light">{{ t('settings.default') }}</span>{% endif %}
+              <div class="form-text mt-0">{{ t('settings.' ~ key ~ '.' ~ v ~ '.help') }}</div></label>
+          </div>
+          {% endfor %}
+        </fieldset>
+        {% endfor %}
+        <button class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>{{ t('common.save') }}</button>
+      </form>
+    </div>
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-shield-check me-1"></i>{{ t('settings.backups') }}</span>
+        <form method="post" action="/settings/backup">
+          <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-download me-1"></i>{{ t('settings.backup_now') }}</button>
+        </form>
+      </div>
+      <div class="card-body">
+        <p class="mb-1">{{ t('settings.backups_help', keep=keep) }}</p>
+        <p><code>{{ backup_dir }}</code></p>
+        <p class="small text-muted mb-0">{{ t('settings.backup_restore_help') }}</p>
+      </div>
+      {% if backups %}
+      <div class="table-responsive">
+        <table class="table table-sm">
+          <thead><tr><th>{{ t('settings.file') }}</th><th>{{ t('settings.date') }}</th><th class="num">{{ t('settings.size') }}</th></tr></thead>
+          <tbody>
+          {% for b in backups %}
+            <tr><td><code>{{ b.name }}</code></td><td>{{ fmt_datetime(b.created_at) }}</td><td class="num">{{ fmt_size(b.size) }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body pt-0 text-muted">{{ t('settings.backup_none') }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-rulers me-1"></i>{{ t('settings.units') }}</div>
+      <table class="table table-sm mb-0">
+        <thead><tr><th>{{ t('settings.unit_short') }}</th><th>{{ t('settings.unit_full') }}</th><th>{{ t('settings.unit_kind') }}</th><th class="num">{{ t('settings.unit_factor') }}</th></tr></thead>
+        <tbody>
+        {% for u in units %}
+          <tr>
+            <td class="fw-semibold">{{ u.name }}</td><td>{{ u.full_name }}</td><td>{{ kind_label(u.kind) }}</td>
+            <td class="num">{% if u.is_base %}<span class="badge text-bg-light">{{ t('common.empty') }}</span>{% else %}{{ fmt_num(u.factor, 3) }} {{ (units | selectattr('kind', 'equalto', u.kind) | selectattr('is_base') | first).name }}{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="card-body small text-muted">{{ t('settings.units_help') }}</div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-info-circle me-1"></i>{{ t('settings.about') }}</div>
+      <div class="card-body small">
+        <div class="text-muted">{{ t('settings.db_location') }}</div>
+        <code>{{ db_path or '—' }}</code>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

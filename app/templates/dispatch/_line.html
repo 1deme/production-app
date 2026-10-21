@@ -1,0 +1,20 @@
+{# გატანის სტრიქონი. საჭიროა: ln {product, qty, unit_price}, avail, errors, idx #}
+{% set p = ln.product %}
+{% set a = avail.get(p.id, 0) %}
+{% set line_errors = errors.get('line:' ~ idx, []) %}
+<tr data-line data-item-id="{{ p.id }}" data-available="{{ input_value(a / p.unit.factor) }}" class="{% if line_errors %}table-danger{% endif %}">
+  <td>
+    <input type="hidden" name="line_product_id" value="{{ p.id }}">
+    <span class="fw-semibold">{{ p.name }}</span>
+    <div class="small text-muted">{{ t('dispatch.available') }}: <span class="{% if a <= 0 %}text-low{% endif %}">{{ fmt_qty(a, p.unit) }}</span></div>
+    <div class="small text-danger js-avail-warn" hidden><i class="bi bi-exclamation-triangle me-1"></i>{{ t('dispatch.exceeds_stock') }}</div>
+    {% for e in line_errors %}<div class="small text-danger">{{ e }}</div>{% endfor %}
+  </td>
+  <td style="width: 10rem">
+    <div class="input-group"><input type="text" inputmode="decimal" class="form-control num js-qty" name="line_qty" value="{{ ln.qty }}" data-focus autocomplete="off" aria-label="{{ t('docs.qty') }}">
+    <span class="input-group-text">{{ p.unit.name }}</span></div>
+  </td>
+  <td style="width: 9rem"><input type="text" inputmode="decimal" class="form-control num js-price" name="line_price" value="{{ ln.unit_price }}" autocomplete="off" placeholder="{{ t('common.optional') }}" aria-label="{{ t('dispatch.price') }}"></td>
+  <td class="num text-nowrap js-amount" style="width: 8rem">—</td>
+  <td class="text-end" style="width: 3rem"><button type="button" class="btn btn-sm btn-outline-danger js-remove-row" tabindex="-1" title="{{ t('common.remove') }}" aria-label="{{ t('common.remove') }}"><i class="bi bi-x-lg"></i></button></td>
+</tr>

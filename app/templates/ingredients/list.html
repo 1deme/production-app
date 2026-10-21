@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ t('ingredients.title') }}{% endblock %}
+{% block heading %}{{ t('ingredients.title') }}{% endblock %}
+{% block actions %}
+  <a href="/ingredients/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('ingredients.new') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body">
+    {# Enter → ფორმა ჩვეულებრივად იგზავნება go=1-ით: ერთი შედეგის შემთხვევაში ბარათი პირდაპირ იხსნება.
+       აკრეფისას → HTMX ცვლის მხოლოდ შედეგების ცხრილს. #}
+    <form id="search-form" action="/ingredients" method="get"
+          hx-get="/ingredients" hx-target="#results" hx-push-url="true"
+          hx-trigger="input changed delay:250ms from:#q, change from:.status-filter"
+          hx-indicator="#search-spinner">
+      <div class="row g-2 align-items-center">
+        <div class="col-lg">
+          <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input id="q" name="q" type="search" class="form-control" value="{{ q }}"
+                   placeholder="{{ t('ingredients.search_placeholder') }}"
+                   autocomplete="off" autofocus data-search-input aria-label="{{ t('common.search') }}">
+            <i class="bi bi-upc-scan"></i>
+          </div>
+          <input type="hidden" name="go" value="1" id="go" disabled>
+        </div>
+        <div class="col-lg-auto">
+          <div class="btn-group" role="group">
+            {% for s in ('active', 'inactive', 'all') %}
+              <input type="radio" class="btn-check status-filter" name="status" id="st-{{ s }}" value="{{ s }}" {% if status == s %}checked{% endif %}>
+              <label class="btn btn-outline-secondary" for="st-{{ s }}">{{ t('common.' ~ s) }}</label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="hint mt-2 d-flex justify-content-between">
+        <span><kbd>Enter</kbd> {{ t('common.open') }} · <kbd>Esc</kbd> {{ t('common.clear') }} · <kbd>/</kbd> {{ t('common.search') }}</span>
+        <span id="search-spinner" class="htmx-indicator spinner-border spinner-border-sm text-secondary"></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="results">
+  {% include "ingredients/_results.html" %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var q = document.getElementById("q"), go = document.getElementById("go"), form = document.getElementById("search-form");
+  // გვერდის ჩატვირთვისას ტექსტი მოინიშნება — შემდეგი სკანირება ძველს ჩაანაცვლებს
+  if (q.value) { q.select(); }
+  q.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      go.disabled = false;   // მხოლოდ Enter-ზე: „გახსენი, თუ ერთია“
+      form.submit();
+    } else if (e.key === "Escape") {
+      q.value = "";
+      htmx.trigger(q, "input");
+    }
+  });
+  window.addEventListener("pageshow", function () { go.disabled = true; });
+})();
+</script>
+{% endblock %}

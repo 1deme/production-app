@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import errors_alert, field_errors, date_input, status_badge %}
+{% block title %}{{ t('production.new_title') if not run else run.number }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/production">{{ t('production.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{% if not run %}{{ t('production.new_title') }}{% else %}{{ t('production.edit_title', number=run.number) }} {{ status_badge(run.status) }}{% endif %}{% endblock %}
+
+{% block content %}
+{% if run and run.status.value == 'confirmed' %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>{{ t('docs.editing_confirmed') }}</div>{% endif %}
+{{ errors_alert(errors) }}
+<form method="post" action="{{ '/production/new' if not run else '/production/' ~ run.id ~ '/edit' }}" data-doc-form novalidate
+      hx-post="/production/plan" hx-target="#plan" hx-trigger="change from:#product_id, input changed delay:400ms from:#qty, change from:#date"
+      hx-sync="this:replace">
+  {% if run %}<input type="hidden" name="run_id" value="{{ run.id }}">{% endif %}
+  <div class="row g-3">
+    <div class="col-xl-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label" for="product_id">{{ t('recipes.product') }}<span class="req">*</span></label>
+            <select class="form-select form-select-lg {% if errors.get('product_id') %}is-invalid{% endif %}" id="product_id" name="product_id" {% if not values.product_id %}autofocus{% endif %}
+                    onchange="document.getElementById('qty-unit').textContent=this.selectedOptions[0].dataset.unit||''">
+              <option value="">{{ t('production.choose_product') }}</option>
+              {% for p in products %}
+                <option value="{{ p.id }}" data-unit="{{ p.unit.name }}" {% if values.product_id == p.id|string %}selected{% endif %} {% if not p.active_recipe %}disabled{% endif %}>
+                  {{ p.name }}{% if not p.active_recipe %} — {{ t('production.no_recipe_short') }}{% endif %}</option>
+              {% endfor %}
+            </select>
+            {{ field_errors(errors, 'product_id') }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="qty">{{ t('production.qty') }}<span class="req">*</span></label>
+            {% set sel = products | selectattr('id', 'equalto', values.product_id|int(0)) | first %}
+            <div class="input-group input-group-lg">
+              <input type="text" inputmode="decimal" class="form-control num {% if errors.get('qty') %}is-invalid{% endif %}" id="qty" name="qty" value="{{ values.qty }}" autocomplete="off" {% if values.product_id and not values.qty %}autofocus{% endif %}>
+              <span class="input-group-text" id="qty-unit">{{ sel.unit.name if sel else '' }}</span>
+            </div>
+            {{ field_errors(errors, 'qty') }}
+          </div>
+          <div class="mb-3">{{ date_input('date', values.date, errors, t('common.date')) }}</div>
+          <div>
+            <label class="form-label" for="note">{{ t('common.note') }}</label>
+            <textarea class="form-control" id="note" name="note" rows="2">{{ values.note }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-xl-8">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between"><span><i class="bi bi-list-check me-1"></i>{{ t('production.plan_title') }}</span>
+          <span class="htmx-indicator spinner-border spinner-border-sm text-secondary"></span></div>
+        <div class="card-body" id="plan">{% include "production/_plan.html" %}</div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script src="/static/js/docs.js"></script>{% endblock %}

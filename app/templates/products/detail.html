@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/products">{{ t('products.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ p.name }}{% if not p.is_active %} <span class="badge text-bg-secondary align-middle fs-6">{{ t('common.inactive') }}</span>{% endif %}{% endblock %}
+{% block actions %}
+  {% if p.is_active and p.active_recipe %}<a href="/production/new?product_id={{ p.id }}" class="btn btn-success"><i class="bi bi-gear-wide-connected me-1"></i>{{ t('production.new') }}</a>{% endif %}
+  <a href="/products/{{ p.id }}/edit" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>{{ t('common.edit') }}</a>
+  {% if p.is_active %}
+  <form method="post" action="/products/{{ p.id }}/deactivate" data-confirm="{{ t('products.confirm_deactivate', name=p.name) }}" data-confirm-style="btn-warning">
+    <button class="btn btn-outline-warning"><i class="bi bi-archive me-1"></i>{{ t('ingredients.deactivate') }}</button></form>
+  {% else %}
+  <form method="post" action="/products/{{ p.id }}/activate"><button class="btn btn-outline-success">{{ t('ingredients.activate') }}</button></form>
+  {% endif %}
+  {% if not used %}
+  <form method="post" action="/products/{{ p.id }}/delete" data-confirm="{{ t('products.confirm_delete', name=p.name) }}">
+    <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>{{ t('common.delete') }}</button></form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><div class="stat"><i class="bi bi-box-seam"></i>
+    <div><div class="value {% if balance < 0 %}text-low{% endif %}">{{ fmt_qty(balance, p.unit) }}</div><div class="label">{{ t('products.stock') }}</div></div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><div class="stat"><i class="bi bi-calculator"></i>
+    <div><div class="value">{% if rc and rc.per_unit is not none %}{{ fmt_money(rc.per_unit) }}{% else %}—{% endif %}</div><div class="label">{{ t('products.recipe_cost_now', unit=p.unit.name) }}</div></div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><div class="stat"><i class="bi bi-graph-up"></i>
+    <div><div class="value">{% if avg_cost is not none %}{{ fmt_price(avg_cost * p.unit.factor) }}{% else %}—{% endif %}</div><div class="label">{{ t('products.avg_production_cost', unit=p.unit.name) }}</div></div></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-6">
+    <div class="card mb-3">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-text me-1"></i>{{ t('products.active_recipe') }}</span>
+        {% if p.active_recipe %}<a href="/recipes/{{ p.active_recipe.id }}" class="small">{{ t('common.open') }} →</a>
+        {% else %}<a href="/recipes/new?product_id={{ p.id }}" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('recipes.new') }}</a>{% endif %}
+      </div>
+      {% if rc %}
+        {% set r = p.active_recipe %}
+        <div class="card-body pb-0 small text-muted">{{ t('recipes.yield_line', qty=fmt_qty(r.yield_qty, p.unit), waste=fmt_num(r.waste_percent)) }}</div>
+        <table class="table table-sm mb-0">
+          <thead><tr><th>{{ t('nav.ingredients') }}</th><th class="num">{{ t('recipes.per_batch') }}</th><th class="num">{{ t('recipes.cost') }}</th></tr></thead>
+          <tbody>
+          {% for cl in rc.lines %}
+            <tr><td>{{ cl.line.ingredient.name }}</td><td class="num">{{ fmt_qty(cl.consumption_base, cl.line.ingredient.unit) }}</td>
+                <td class="num">{% if cl.amount is not none %}{{ fmt_money(cl.amount) }}{% else %}<span class="text-warning-emphasis">{{ t('recipes.no_price') }}</span>{% endif %}</td></tr>
+          {% endfor %}
+          </tbody>
+          <tfoot><tr class="fw-semibold"><td colspan="2">{{ t('recipes.batch_total') }}</td><td class="num">{{ fmt_money(rc.batch_total) }}</td></tr></tfoot>
+        </table>
+      {% else %}
+        <div class="card-body text-muted">{{ t('products.no_recipe') }}</div>
+      {% endif %}
+    </div>
+    <div class="card mb-3">
+      <div class="card-header">{{ t('recipes.versions') }}</div>
+      <ul class="list-group list-group-flush">
+        {% for r in p.recipes %}
+          <li class="list-group-item d-flex justify-content-between"><a href="/recipes/{{ r.id }}">v{{ r.version }}</a>
+            <span>{% if r.is_active %}<span class="badge text-bg-success">{{ t('recipes.active') }}</span>{% endif %} <span class="small text-muted">{{ fmt_datetime(r.created_at) }}</span></span></li>
+        {% else %}<li class="list-group-item text-muted small">—</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-xl-6">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-arrow-left-right me-1"></i>{{ t('stock.history') }}</div>
+      {% with unit=p.unit %}{% include "partials/_movements.html" %}{% endwith %}
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-1"></i>{{ t('common.history') }}</div>
+      {% with entries=audit_entries %}{% include "partials/_history.html" %}{% endwith %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import errors_alert, field_errors, date_input, picker, status_badge %}
+{% set is_new = receipt is none %}
+{% block title %}{{ t('receipts.new_title') if is_new else receipt.number }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/receipts">{{ t('receipts.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{% if is_new %}{{ t('receipts.new_title') }}{% else %}{{ t('receipts.edit_title', number=receipt.number) }} {{ status_badge(receipt.status) }}{% endif %}{% endblock %}
+
+{% block content %}
+{% if receipt and receipt.status.value == 'confirmed' %}
+<div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i>{{ t('docs.editing_confirmed') }}</div>
+{% endif %}
+{{ errors_alert(errors) }}
+<form method="post" action="{{ '/receipts/new' if is_new else '/receipts/' ~ receipt.id ~ '/edit' }}" data-doc-form novalidate>
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-2">
+          <label class="form-label">{{ t('docs.number') }}</label>
+          <div class="form-control-plaintext fw-semibold">{{ receipt.number if receipt else t('docs.number_auto') }}</div>
+        </div>
+        <div class="col-md-2">{{ date_input('date', values.date, errors, t('common.date')) }}</div>
+        <div class="col-md-4">
+          <label class="form-label" for="supplier">{{ t('receipts.supplier') }}</label>
+          <input type="text" class="form-control" id="supplier" name="supplier" value="{{ values.supplier }}" list="supplier-list" autocomplete="off" maxlength="200">
+          <datalist id="supplier-list">{% for s in suppliers %}<option value="{{ s }}">{% endfor %}</datalist>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label" for="note">{{ t('common.note') }}</label>
+          <input type="text" class="form-control" id="note" name="note" value="{{ values.note }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between"><span>{{ t('nav.ingredients') }}</span><span class="text-muted small">{{ t('docs.lines_count') }}: <span data-line-count>0</span></span></div>
+    <div class="card-body pb-2">
+      {{ picker('/api/ingredients/lookup', '/receipts/line-row', '#lines', t('docs.picker_placeholder_ingredient'), create=true) }}
+      <div class="hint mt-1">{{ t('docs.picker_hint') }}</div>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead><tr><th>{{ t('nav.ingredients') }}</th><th>{{ t('docs.qty') }}</th><th>{{ t('docs.unit') }}</th>
+          <th>{{ t('receipts.unit_price') }}</th><th>{{ t('receipts.amount') }}</th><th></th></tr></thead>
+        <tbody id="lines">
+          {% for ln in lines %}{% with idx=loop.index %}{% include "receipts/_line.html" %}{% endwith %}{% endfor %}
+        </tbody>
+        <tfoot>
+          <tr data-empty-lines {% if lines %}hidden{% endif %}><td colspan="6" class="text-center text-muted py-4"><i class="bi bi-upc-scan me-1"></i>{{ t('docs.empty_lines') }}</td></tr>
+          <tr class="fw-semibold fs-5"><td colspan="4" class="text-end">{{ t('docs.total') }}</td><td class="num" data-total>0,00 ₾</td><td></td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 mt-3 flex-wrap">
+    {% if is_new or receipt.status.value == 'draft' %}
+      <button type="submit" name="action" value="confirm" class="btn btn-success btn-lg"><i class="bi bi-check2-all me-1"></i>{{ t('docs.save_and_confirm') }}</button>
+      <button type="submit" name="action" value="draft" class="btn btn-outline-primary btn-lg"><i class="bi bi-save me-1"></i>{{ t('docs.save_draft') }}</button>
+    {% else %}
+      <button type="submit" name="action" value="save" class="btn btn-primary btn-lg"><i class="bi bi-check-lg me-1"></i>{{ t('docs.save_changes') }}</button>
+    {% endif %}
+    <a href="{{ '/receipts' if is_new else '/receipts/' ~ receipt.id }}" class="btn btn-link btn-lg">{{ t('common.cancel') }}</a>
+  </div>
+</form>
+{% include "partials/_quick_ingredient.html" %}
+{% endblock %}
+{% block scripts %}<script src="/static/js/docs.js"></script>{% endblock %}

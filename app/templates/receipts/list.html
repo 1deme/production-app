@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import status_badge %}
+{% block title %}{{ t('receipts.title') }}{% endblock %}
+{% block heading %}{{ t('receipts.title') }}{% endblock %}
+{% block actions %}<a href="/receipts/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('receipts.new') }}</a>{% endblock %}
+{% block content %}
+{% with base_url='/receipts' %}{% include "partials/_doc_list_filters.html" %}{% endwith %}
+<div class="card">
+  {% if docs %}
+  <div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>{{ t('docs.number') }}</th><th>{{ t('common.date') }}</th><th>{{ t('receipts.supplier') }}</th>
+      <th class="num">{{ t('docs.lines_count') }}</th><th class="num">{{ t('docs.total') }}</th><th>{{ t('common.status') }}</th></tr></thead>
+    <tbody>
+    {% for d in docs %}
+      <tr class="row-link {% if d.status.value == 'cancelled' %}text-decoration-line-through text-muted{% endif %}" data-href="/receipts/{{ d.id }}">
+        <td class="fw-semibold"><a href="/receipts/{{ d.id }}" class="text-decoration-none">{{ d.number }}</a></td>
+        <td>{{ fmt_date(d.date) }}</td>
+        <td>{{ d.counterparty.name if d.counterparty else '—' }}</td>
+        <td class="num">{{ d.lines|length }}</td>
+        <td class="num">{{ fmt_money(d.total) }}</td>
+        <td>{{ status_badge(d.status) }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-truck big"></i><p class="mb-3">{{ t('docs.empty') }}</p>
+    <a class="btn btn-primary" href="/receipts/new"><i class="bi bi-plus-lg me-1"></i>{{ t('receipts.new') }}</a></div>
+  {% endif %}
+</div>
+{% endblock %}

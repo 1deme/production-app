@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block heading %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="empty-state">
+    <i class="bi bi-exclamation-octagon big"></i>
+    <p class="fs-5">{{ text }}</p>
+    <a href="/" class="btn btn-primary">{{ t('error.to_home') }}</a>
+  </div>
+</div>
+{% endblock %}

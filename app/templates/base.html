@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ t('app.name') }}{% endblock %} · {{ t('app.name') }}</title>
+  <link rel="stylesheet" href="/static/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="/static/vendor/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="app-shell">
+  <nav class="sidebar" aria-label="{{ t('app.name') }}">
+    <a href="/" class="brand">
+      <i class="bi bi-boxes"></i>
+      <span>
+        <strong>{{ t('app.name') }}</strong>
+        <small>{{ t('app.tagline') }}</small>
+      </span>
+    </a>
+    <ul class="nav-list">
+      {% for item in nav %}
+        {% if item.group %}<li class="nav-group">{{ t(item.group) }}</li>{% endif %}
+        <li>
+          {% if item.ready %}
+            <a href="{{ item.url }}" class="nav-link-item {% if active_nav == item.key %}active{% endif %}">
+              <i class="bi {{ item.icon }}"></i><span>{{ t('nav.' ~ item.key) }}</span>
+            </a>
+          {% else %}
+            <span class="nav-link-item disabled" title="{{ t('nav.coming_soon_hint') }}">
+              <i class="bi {{ item.icon }}"></i><span>{{ t('nav.' ~ item.key) }}</span>
+              <span class="badge-soon">{{ t('nav.coming_soon') }}</span>
+            </span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </nav>
+
+  <main class="content">
+    <header class="page-header">
+      <div>
+        {% block breadcrumbs %}{% endblock %}
+        <h1>{% block heading %}{% endblock %}</h1>
+      </div>
+      <div class="page-actions">{% block actions %}{% endblock %}</div>
+    </header>
+
+    <div class="toast-container position-fixed top-0 end-0 p-3" id="toasts">
+      {% for f in flashes %}
+        <div class="toast align-items-center border-0 text-bg-{{ f.level }}" role="status" aria-live="polite" data-bs-delay="{{ 7000 if f.level in ('danger', 'warning') else 4000 }}">
+          <div class="d-flex">
+            <div class="toast-body">
+              <i class="bi {{ 'bi-check-circle' if f.level == 'success' else 'bi-exclamation-triangle' }} me-1"></i>{{ f.message }}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="{{ t('common.close') }}"></button>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{# დადასტურების ფანჯარა — გამოიყენება ყველა სახიფათო მოქმედებისთვის (data-confirm="...") #}
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmModalTitle">{{ t('common.confirm_title') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ t('common.close') }}"></button>
+      </div>
+      <div class="modal-body" id="confirmModalText"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ t('common.cancel') }}</button>
+        <button type="button" class="btn btn-danger" id="confirmModalOk">{{ t('common.confirm') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/static/vendor/bootstrap.bundle.min.js"></script>
+<script src="/static/vendor/htmx.min.js"></script>
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

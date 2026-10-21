@@ -1,0 +1,82 @@
+{% set items = result.items %}
+{% if items %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          <th>{{ t('ingredients.name') }}</th>
+          <th>{{ t('ingredients.barcodes') }}</th>
+          <th>{{ t('ingredients.unit') }}</th>
+          <th class="num">{{ t('reports.stock') }}</th>
+          <th class="num">{{ t('ingredients.min_stock') }}</th>
+          <th>{{ t('common.status') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ing in items %}
+        <tr class="row-link" data-href="/ingredients/{{ ing.id }}">
+          <td>
+            <a href="/ingredients/{{ ing.id }}" class="fw-semibold text-decoration-none">{{ ing.name }}</a>
+            {% if ing in result.exact_barcode %}<i class="bi bi-upc-scan text-success ms-1" title="{{ t('ingredients.barcode') }}"></i>{% endif %}
+          </td>
+          <td>
+            {% for b in ing.barcodes %}<span class="barcode me-1">{{ b.barcode }}</span>{% else %}<span class="text-muted">{{ t('common.empty') }}</span>{% endfor %}
+          </td>
+          <td>{{ ing.unit.name }}</td>
+          {% set b = balances.get(ing.id, 0) %}
+          <td class="num fw-semibold {% if (ing.min_stock > 0 and b < ing.min_stock) or b < 0 %}text-low{% endif %}">{{ fmt_qty(b, ing.unit) }}</td>
+          <td class="num">{% if ing.min_stock > 0 %}{{ fmt_qty(ing.min_stock, ing.unit) }}{% else %}<span class="text-muted">{{ t('common.empty') }}</span>{% endif %}</td>
+          <td>
+            {% if ing.is_active %}<span class="badge text-bg-success-subtle text-success-emphasis">{{ t('common.active') }}</span>
+            {% else %}<span class="badge text-bg-secondary">{{ t('common.inactive') }}</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer bg-white small text-muted d-flex justify-content-between">
+    <span>{{ t('ingredients.count', n=result.total) }}</span>
+    {% if result.total > items|length %}<span class="text-warning-emphasis">{{ t('ingredients.shown_first', n=items|length) }}</span>{% endif %}
+  </div>
+</div>
+
+{% elif q and found_elsewhere %}
+<div class="card">
+  <div class="empty-state">
+    <i class="bi bi-archive big"></i>
+    <p class="fs-5 mb-3">{{ t('ingredients.found_elsewhere', q=q, n=found_elsewhere) }}</p>
+    <a class="btn btn-primary" href="/ingredients?q={{ q|urlencode }}&status=all">{{ t('ingredients.show_all') }}</a>
+  </div>
+</div>
+
+{% elif q %}
+<div class="card">
+  <div class="empty-state">
+    <i class="bi bi-search big"></i>
+    <p class="fs-5 mb-1">{{ t('ingredients.not_found', q=q) }}</p>
+    <p class="mb-3">{{ t('ingredients.not_found_hint') }}</p>
+    {% if q_is_barcode %}
+      <a class="btn btn-primary btn-lg" href="/ingredients/new?barcode={{ q|urlencode }}"><i class="bi bi-upc-scan me-1"></i>{{ t('ingredients.add_with_barcode', q=q) }}</a>
+      <a class="btn btn-outline-secondary btn-lg" href="/ingredients/new?name={{ q|urlencode }}">{{ t('ingredients.add_with_name', q=q) }}</a>
+    {% else %}
+      <a class="btn btn-primary btn-lg" href="/ingredients/new?name={{ q|urlencode }}"><i class="bi bi-plus-lg me-1"></i>{{ t('ingredients.add_with_name', q=q) }}</a>
+      <a class="btn btn-outline-secondary btn-lg" href="/ingredients/new?barcode={{ q|urlencode }}">{{ t('ingredients.add_with_barcode', q=q) }}</a>
+    {% endif %}
+  </div>
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <i class="bi bi-basket big"></i>
+    {% if status == 'inactive' %}
+      <p class="mb-0">{{ t('ingredients.empty_inactive') }}</p>
+    {% else %}
+      <p class="mb-3">{{ t('ingredients.empty') }}</p>
+      <a class="btn btn-primary" href="/ingredients/new"><i class="bi bi-plus-lg me-1"></i>{{ t('ingredients.new') }}</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}

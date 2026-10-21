@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ t('reports.title') }}{% endblock %}
+{% block heading %}{{ t('reports.title') }}{% endblock %}
+{% block content %}
+<div class="row g-3">
+  {% for key, (fn, icon) in reports.items() %}
+  <div class="col-md-6 col-xl-4">
+    <a href="/reports/{{ key }}" class="card card-body h-100 text-decoration-none text-reset report-card">
+      <div class="stat"><i class="bi {{ icon }}"></i>
+        <div><div class="fw-semibold fs-6">{{ t('reports.' ~ key) }}</div><div class="label">{{ t('reports.desc.' ~ key) }}</div></div>
+      </div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

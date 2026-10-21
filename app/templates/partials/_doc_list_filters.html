@@ -1,0 +1,28 @@
+{# საბუთების სიის ფილტრი. საჭიროა: base_url, q, status, date_from, date_to #}
+<div class="card mb-3"><div class="card-body">
+  <form method="get" action="{{ base_url }}" class="row g-2 align-items-end">
+    <div class="col-lg">
+      <label class="form-label small mb-0" for="q">{{ t('common.search') }}</label>
+      <input type="search" class="form-control" id="q" name="q" value="{{ q }}" placeholder="{{ t('docs.search_placeholder') }}" data-search-input>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0" for="status">{{ t('common.status') }}</label>
+      <select class="form-select" id="status" name="status">
+        <option value="">{{ t('common.all') }}</option>
+        {% for s in ('draft', 'confirmed', 'cancelled') %}<option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ t('status.' ~ s) }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0" for="date_from">{{ t('common.date_from') }}</label>
+      <input type="text" class="form-control date-input" id="date_from" name="date_from" value="{{ date_from }}" placeholder="{{ t('common.date_placeholder') }}" style="width: 9rem">
+    </div>
+    <div class="col-auto">
+      <label class="form-label small mb-0" for="date_to">{{ t('common.date_to') }}</label>
+      <input type="text" class="form-control date-input" id="date_to" name="date_to" value="{{ date_to }}" placeholder="{{ t('common.date_placeholder') }}" style="width: 9rem">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-primary" type="submit"><i class="bi bi-funnel me-1"></i>{{ t('common.filter') }}</button>
+      {% if q or status or date_from or date_to %}<a href="{{ base_url }}" class="btn btn-link">{{ t('common.clear') }}</a>{% endif %}
+    </div>
+  </form>
+</div></div>

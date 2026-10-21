@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ ing.name }}{% endblock %}
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="/ingredients">{{ t('ingredients.title') }}</a></li>
+</ol></nav>
+{% endblock %}
+{% block heading %}
+  {{ ing.name }}
+  {% if not ing.is_active %}<span class="badge text-bg-secondary align-middle fs-6">{{ t('ingredients.status_inactive_badge') }}</span>{% endif %}
+{% endblock %}
+{% block actions %}
+  <a href="/ingredients/{{ ing.id }}/edit" class="btn btn-primary"><i class="bi bi-pencil me-1"></i>{{ t('common.edit') }}</a>
+  {% if ing.is_active %}
+    <form method="post" action="/ingredients/{{ ing.id }}/deactivate" data-confirm="{{ t('ingredients.confirm_deactivate', name=ing.name) }}" data-confirm-style="btn-warning">
+      <button type="submit" class="btn btn-outline-warning"><i class="bi bi-archive me-1"></i>{{ t('ingredients.deactivate') }}</button>
+    </form>
+  {% else %}
+    <form method="post" action="/ingredients/{{ ing.id }}/activate">
+      <button type="submit" class="btn btn-outline-success"><i class="bi bi-arrow-counterclockwise me-1"></i>{{ t('ingredients.activate') }}</button>
+    </form>
+  {% endif %}
+  {% if not used %}
+    <form method="post" action="/ingredients/{{ ing.id }}/delete" data-confirm="{{ t('ingredients.confirm_delete', name=ing.name) }}">
+      <button type="submit" class="btn btn-outline-danger" title="{{ t('ingredients.delete_hint') }}"><i class="bi bi-trash me-1"></i>{{ t('common.delete') }}</button>
+    </form>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{% if not ing.is_active %}
+<div class="alert alert-secondary"><i class="bi bi-archive me-1"></i>{{ t('ingredients.inactive_notice') }}</div>
+{% endif %}
+{% set low = (ing.min_stock > 0 and balance < ing.min_stock) or balance < 0 %}
+<div class="row g-3 mb-3">
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><div class="stat"><i class="bi bi-basket {% if low %}text-danger{% endif %}"></i>
+    <div><div class="value {% if low %}text-low{% endif %}">{{ fmt_qty(balance, ing.unit) }}</div><div class="label">{{ t('reports.stock') }}{% if low %} · {{ t('dashboard.below_min') }}{% endif %}</div></div></div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="card card-body h-100"><div class="stat"><i class="bi bi-tag"></i>
+    <div><div class="value">{% if unit_cost is not none %}{{ fmt_price(unit_cost * ing.unit.factor) }}{% else %}—{% endif %}</div><div class="label">{{ t('ingredients.cost_per', unit=ing.unit.name) }}</div></div></div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header">{{ t('ingredients.info') }}</div>
+      <div class="card-body">
+        <dl class="info row mb-0">
+          <div class="col-sm-6"><dt>{{ t('ingredients.unit') }}</dt><dd>{{ ing.unit.name }} ({{ ing.unit.full_name }})</dd></div>
+          <div class="col-sm-6"><dt>{{ t('ingredients.min_stock') }}</dt><dd>{% if ing.min_stock > 0 %}{{ fmt_qty(ing.min_stock, ing.unit) }}{% else %}{{ t('common.empty') }}{% endif %}</dd></div>
+          <div class="col-12"><dt>{{ t('ingredients.barcodes') }}</dt>
+            <dd>{% for b in ing.barcodes %}<span class="barcode me-1">{{ b.barcode }}</span>{% else %}<span class="text-muted">{{ t('ingredients.no_barcodes') }}</span>{% endfor %}</dd></div>
+          {% if ing.note %}<div class="col-12"><dt>{{ t('common.note') }}</dt><dd>{{ ing.note }}</dd></div>{% endif %}
+          <div class="col-sm-6"><dt>{{ t('common.created_at') }}</dt><dd>{{ fmt_datetime(ing.created_at) }}</dd></div>
+          <div class="col-sm-6"><dt>{{ t('common.updated_at') }}</dt><dd>{{ fmt_datetime(ing.updated_at) }}</dd></div>
+        </dl>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><i class="bi bi-arrow-left-right me-1"></i>{{ t('stock.history') }}</div>
+      {% with history=movements, unit=ing.unit %}{% include "partials/_movements.html" %}{% endwith %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-clock-history me-1"></i>{{ t('common.history') }}</div>
+      {% with entries=history %}{% include "partials/_history.html" %}{% endwith %}
+    </div>
+  </div>
+</div>
+{% endblock %}

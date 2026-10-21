@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import errors_alert, date_input %}
+{% set is_ing = item_type.value == 'ingredient' %}
+{% block title %}{{ t('inventory.new_title') }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/inventory">{{ t('inventory.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ t('inventory.new_title') if not doc else t('inventory.edit_title', number=doc.number) }} · {{ t('inventory.of_ingredients') if is_ing else t('inventory.of_products') }}{% endblock %}
+{% block actions %}
+  {% if not doc %}
+  <div class="btn-group">
+    <a href="/inventory/new?type=ingredient" class="btn {{ 'btn-secondary' if is_ing else 'btn-outline-secondary' }}">{{ t('nav.ingredients') }}</a>
+    <a href="/inventory/new?type=product" class="btn {{ 'btn-secondary' if not is_ing else 'btn-outline-secondary' }}">{{ t('nav.products') }}</a>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+{{ errors_alert(errors) }}
+<form method="post" action="{{ '/inventory/new?type=' ~ item_type.value if not doc else '/inventory/' ~ doc.id ~ '/edit' }}" data-doc-form novalidate>
+  <div class="card mb-3"><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-2">{{ date_input('date', values.date, errors, t('common.date')) }}</div>
+    <div class="col-md-5"><label class="form-label" for="note">{{ t('common.note') }}</label><input type="text" class="form-control" id="note" name="note" value="{{ values.note }}"></div>
+    <div class="col-md-5">
+      <label class="form-label" for="inv-filter">{{ t('inventory.filter') }}</label>
+      <input type="search" class="form-control" id="inv-filter" placeholder="{{ t('inventory.filter_placeholder') }}" autocomplete="off" data-search-input>
+    </div>
+  </div>
+  <div class="form-text mt-2"><i class="bi bi-info-circle me-1"></i>{{ t('inventory.help') }}</div>
+  </div></div>
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span>{{ t('inventory.counted') }}: <span id="inv-count">0</span> / {{ items|length }}</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="fill-system"><i class="bi bi-magic me-1"></i>{{ t('inventory.fill_system') }}</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="inv-table">
+        <thead><tr><th>{{ t('inventory.item') }}</th><th class="num">{{ t('inventory.system') }}</th><th style="width: 12rem">{{ t('inventory.actual') }}</th><th class="num">{{ t('inventory.diff') }}</th></tr></thead>
+        <tbody>
+        {% for it in items %}
+          {% set sys = system.get(it.id, 0) %}
+          {% set errs = errors.get('item:' ~ it.id, []) %}
+          <tr data-name="{{ it.search_name }}" data-system="{{ input_value(sys / it.unit.factor) }}" class="{% if errs %}table-danger{% endif %}">
+            <td><span class="fw-semibold">{{ it.name }}</span>{% for e in errs %}<div class="small text-danger">{{ e }}</div>{% endfor %}</td>
+            <td class="num">{{ fmt_qty(sys, it.unit) }}</td>
+            <td><div class="input-group input-group-sm">
+              <input type="text" inputmode="decimal" class="form-control num inv-actual" name="actual_{{ it.id }}" value="{{ actual.get(it.id, '') }}" autocomplete="off" aria-label="{{ it.name }}">
+              <span class="input-group-text">{{ it.unit.name }}</span></div></td>
+            <td class="num inv-diff">—</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="d-flex gap-2 mt-3 flex-wrap">
+    <button type="submit" name="action" value="confirm" class="btn btn-success btn-lg" data-confirm="{{ t('inventory.confirm_q') }}" data-confirm-style="btn-success"><i class="bi bi-check2-all me-1"></i>{{ t('docs.save_and_confirm') }}</button>
+    <button type="submit" name="action" value="draft" class="btn btn-outline-primary btn-lg"><i class="bi bi-save me-1"></i>{{ t('docs.save_draft') }}</button>
+    <a href="{{ '/inventory/' ~ doc.id if doc else '/inventory' }}" class="btn btn-link btn-lg">{{ t('common.cancel') }}</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/docs.js"></script>
+<script>
+(function () {
+  var table = document.getElementById("inv-table");
+  function update(row) {
+    var input = row.querySelector(".inv-actual"), cell = row.querySelector(".inv-diff");
+    var a = Num.parse(input.value), s = Num.parse(row.dataset.system) || 0;
+    if (a == null) { cell.textContent = "—"; cell.className = "num inv-diff"; }
+    else {
+      var d = a - s;
+      cell.textContent = (d > 0 ? "+" : "") + Num.fmt(d, 3).replace(/,?0+$/, "");
+      cell.className = "num inv-diff fw-semibold " + (d < 0 ? "text-danger" : d > 0 ? "text-success" : "text-muted");
+    }
+  }
+  function count() {
+    var n = 0;
+    table.querySelectorAll(".inv-actual").forEach(function (i) { if (i.value.trim()) n++; });
+    document.getElementById("inv-count").textContent = n;
+  }
+  table.querySelectorAll("tbody tr").forEach(update);
+  count();
+  table.addEventListener("input", function (e) { var r = e.target.closest("tr"); if (r) { update(r); count(); } });
+  document.getElementById("inv-filter").addEventListener("input", function () {
+    var q = this.value.trim().toLowerCase();
+    table.querySelectorAll("tbody tr").forEach(function (r) { r.hidden = q && r.dataset.name.indexOf(q) < 0; });
+  });
+  document.getElementById("fill-system").addEventListener("click", function () {
+    table.querySelectorAll("tbody tr").forEach(function (r) {
+      if (r.hidden) return;
+      var i = r.querySelector(".inv-actual");
+      if (!i.value.trim()) { i.value = r.dataset.system; update(r); }
+    });
+    count();
+  });
+})();
+</script>
+{% endblock %}

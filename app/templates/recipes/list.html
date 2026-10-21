@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ t('recipes.title') }}{% endblock %}
+{% block heading %}{{ t('recipes.title') }}{% endblock %}
+{% block actions %}<a href="/recipes/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('recipes.new') }}</a>{% endblock %}
+{% block content %}
+<div class="card">
+  {% if rows %}
+  <div class="table-responsive">
+  <table class="table table-hover align-middle">
+    <thead><tr><th>{{ t('recipes.product') }}</th><th>{{ t('recipes.version') }}</th><th class="num">{{ t('recipes.yield') }}</th>
+      <th class="num">{{ t('recipes.waste') }}</th><th class="num">{{ t('docs.lines_count') }}</th><th class="num">{{ t('recipes.per_product_unit') }}</th></tr></thead>
+    <tbody>
+    {% for p, r, rc in rows %}
+      {% if r %}
+      <tr class="row-link" data-href="/recipes/{{ r.id }}">
+        <td class="fw-semibold"><a href="/recipes/{{ r.id }}" class="text-decoration-none">{{ p.name }}</a></td>
+        <td>v{{ r.version }}{% if p.recipes|length > 1 %} <span class="text-muted small">({{ t('recipes.n_versions', n=p.recipes|length) }})</span>{% endif %}</td>
+        <td class="num">{{ fmt_qty(r.yield_qty, p.unit) }}</td>
+        <td class="num">{{ fmt_num(r.waste_percent) }}%</td>
+        <td class="num">{{ r.lines|length }}</td>
+        <td class="num">{{ fmt_money(rc.per_unit) if rc.per_unit is not none else '—' }}{% if rc.missing %} <i class="bi bi-exclamation-triangle text-warning" title="{{ t('recipes.missing_prices') }}"></i>{% endif %}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td class="fw-semibold">{{ p.name }}</td>
+        <td colspan="5"><a href="/recipes/new?product_id={{ p.id }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-plus-lg me-1"></i>{{ t('products.no_recipe_add') }}</a></td>
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><i class="bi bi-journal-text big"></i><p>{{ t('recipes.empty') }}</p>
+    <a class="btn btn-primary" href="/products/new">{{ t('products.new') }}</a></div>
+  {% endif %}
+</div>
+{% endblock %}

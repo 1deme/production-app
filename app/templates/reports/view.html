@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% from "partials/_macros.html" import period_filter %}
+{% block title %}{{ report.title }}{% endblock %}
+{% block breadcrumbs %}<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/reports">{{ t('reports.title') }}</a></li></ol></nav>{% endblock %}
+{% block heading %}{{ report.title }}{% endblock %}
+{% block actions %}
+  {% set qs = 'date_from=' ~ (date_from|urlencode) ~ '&date_to=' ~ (date_to|urlencode) %}
+  <a href="/reports/{{ key }}?{{ qs }}&format=xlsx" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+  <a href="/reports/{{ key }}?{{ qs }}&format=pdf" target="_blank" class="btn btn-outline-danger"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+{% endblock %}
+{% block content %}
+<div class="card mb-3"><div class="card-body">
+  {% if report.needs_period %}
+    {{ period_filter('/reports/' ~ key, date_from, date_to) }}
+  {% else %}
+    <form method="get" action="/reports/{{ key }}" class="row g-2 align-items-end">
+      <div class="col-auto"><label class="form-label small mb-0" for="date_to">{{ t('reports.as_of_label') }}</label>
+        <input type="text" class="form-control date-input" id="date_to" name="date_to" value="{{ date_to }}" placeholder="{{ t('common.date_placeholder') }}" style="width: 9rem"></div>
+      <div class="col-auto"><button class="btn btn-outline-primary"><i class="bi bi-funnel me-1"></i>{{ t('common.filter') }}</button></div>
+    </form>
+  {% endif %}
+  {% if error %}<div class="text-danger small mt-2">{{ error }}</div>{% endif %}
+  <div class="text-muted small mt-2">{{ report.period }}</div>
+</div></div>
+
+{% for sec in report.sections %}
+<div class="card mb-3">
+  {% if report.sections|length > 1 %}<div class="card-header">{{ sec.title }}</div>{% endif %}
+  {% if sec.rows %}
+  <div class="table-responsive">
+  <table class="table table-sm table-hover align-middle mb-0">
+    <thead><tr>{% for c in sec.columns %}<th class="{{ 'num' if c.kind != 'text' and c.kind != 'date' }}">{{ c.label }}</th>{% endfor %}</tr></thead>
+    <tbody>
+    {% for row in sec.rows %}
+      {% set flag = sec.row_flags[loop.index0] if sec.row_flags|length > loop.index0 else '' %}
+      <tr class="{% if flag == 'low' %}text-low{% endif %}">
+        {% for c in sec.columns %}<td class="{{ 'num' if c.kind != 'text' and c.kind != 'date' }}">{{ fmt_cell(row.get(c.key), c.kind) }}</td>{% endfor %}
+      </tr>
+    {% endfor %}
+    </tbody>
+    {% if sec.totals %}
+    <tfoot><tr class="fw-semibold">{% for c in sec.columns %}<td class="{{ 'num' if c.kind != 'text' and c.kind != 'date' }}">{% if sec.totals.get(c.key) is not none %}{{ fmt_cell(sec.totals.get(c.key), c.kind) }}{% endif %}</td>{% endfor %}</tr></tfoot>
+    {% endif %}
+  </table>
+  </div>
+  {% if sec.note %}<div class="card-footer bg-white small text-muted">{{ sec.note }}</div>{% endif %}
+  {% else %}
+  <div class="card-body text-muted">{{ t('reports.no_data') }}</div>
+  {% endif %}
+</div>
+{% endfor %}
+{% endblock %}

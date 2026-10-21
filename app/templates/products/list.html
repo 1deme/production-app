@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}{{ t('products.title') }}{% endblock %}
+{% block heading %}{{ t('products.title') }}{% endblock %}
+{% block actions %}
+  <a href="/dispatch/new" class="btn btn-outline-primary"><i class="bi bi-send me-1"></i>{{ t('dispatch.new') }}</a>
+  <a href="/products/new" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>{{ t('products.new') }}</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3"><div class="card-body">
+  <form method="get" action="/products" class="row g-2 align-items-center">
+    <div class="col-lg">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input name="q" type="search" class="form-control" value="{{ q }}" placeholder="{{ t('products.search_placeholder') }}" autocomplete="off" autofocus data-search-input>
+        <i class="bi bi-upc-scan"></i>
+      </div>
+    </div>
+    <div class="col-lg-auto">
+      <div class="btn-group">
+        {% for s in ('active', 'inactive', 'all') %}
+          <input type="radio" class="btn-check" name="status" id="st-{{ s }}" value="{{ s }}" {% if status == s %}checked{% endif %} onchange="this.form.submit()">
+          <label class="btn btn-outline-secondary" for="st-{{ s }}">{{ t('common.' ~ s) }}</label>
+        {% endfor %}
+      </div>
+    </div>
+  </form>
+</div></div>
+
+<div class="card">
+  {% if items %}
+  <div class="table-responsive">
+    <table class="table table-hover align-middle">
+      <thead><tr>
+        <th>{{ t('products.name') }}</th><th>{{ t('products.code') }}</th><th>{{ t('products.recipe') }}</th>
+        <th class="num">{{ t('products.stock') }}</th><th class="num">{{ t('products.cost_per_unit') }}</th><th>{{ t('common.status') }}</th>
+      </tr></thead>
+      <tbody>
+      {% for p in items %}
+        {% set b = bal.get(p.id, zero) %}
+        <tr class="row-link" data-href="/products/{{ p.id }}">
+          <td><a href="/products/{{ p.id }}" class="fw-semibold text-decoration-none">{{ p.name }}</a></td>
+          <td>{% if p.code %}<span class="barcode">{{ p.code }}</span>{% endif %}{% if p.barcode %} <span class="barcode">{{ p.barcode }}</span>{% endif %}</td>
+          <td>
+            {% if p.active_recipe %}<a href="/recipes/{{ p.active_recipe.id }}">v{{ p.active_recipe.version }}</a>
+            {% else %}<a href="/recipes/new?product_id={{ p.id }}" class="text-warning-emphasis small"><i class="bi bi-exclamation-circle"></i> {{ t('products.no_recipe_add') }}</a>{% endif %}
+          </td>
+          <td class="num fw-semibold {% if b < 0 %}text-low{% endif %}">{{ fmt_qty(b, p.unit) }}</td>
+          <td class="num">{% set rc = recipe_costs.get(p.id) %}{% if rc and rc.per_unit is not none %}{{ fmt_money(rc.per_unit) }}{% if rc.missing %} <i class="bi bi-exclamation-triangle text-warning" title="{{ t('recipes.missing_prices') }}"></i>{% endif %} / {{ p.unit.name }}{% else %}—{% endif %}</td>
+          <td>{% if p.is_active %}<span class="badge text-bg-success-subtle text-success-emphasis">{{ t('common.active') }}</span>{% else %}<span class="badge text-bg-secondary">{{ t('common.inactive') }}</span>{% endif %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <i class="bi bi-box-seam big"></i>
+    <p class="mb-3">{{ t('products.not_found', q=q) if q else t('products.empty') }}</p>
+    <a class="btn btn-primary" href="/products/new"><i class="bi bi-plus-lg me-1"></i>{{ t('products.new') }}</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
